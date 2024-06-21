@@ -1,0 +1,64 @@
+.App {
+  text-align: center;
+  padding: 20px;
+}
+
+.container {
+  text-align: center;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+@media (min-width: 1500px) {
+  .container {
+    flex-direction: row;
+  }
+}
+
+.timer-display {
+  font-size: 48px;
+  margin: 20px 0;
+}
+
+.timer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.controls {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.controls button {
+  margin: 0 10px;
+  padding: 10px 30px;
+  font-size: 16px;
+}
+
+.display {
+  display: flex;
+  justify-content: center;
+}
+
+@font-face {
+  font-family: 'DSEG7';
+  src: url('../fonts/DSEG7Modern-Bold.ttf');
+}
+
+.segment-display {
+  font-family: 'DSEG7', sans-serif;
+  font-size: 48px;
+  margin: 20px 0;
+}
+
+.leaderboard {
+  flex: 3;
+  width: 100%;
+}

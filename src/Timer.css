@@ -1,0 +1,10 @@
+@font-face {
+  font-family: 'DSEG7';
+  src: url('fonts/DSEG7Modern-Regular.ttf');
+}
+
+.segment-display {
+  font-family: 'DSEG7', sans-serif;
+  font-size: 48px;
+  margin: 20px 0;
+}

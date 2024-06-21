@@ -1,0 +1,6 @@
+[
+  {"id": 0, "name": "KITcar", "color": [0, 255, 0], "points": 300},
+  {"id": 1, "name": "Ulmer Spatzen", "color": [255, 255, 0], "points": 200},
+  {"id": 2, "name": "Bergfinken", "color": [255, 0, 0], "points": 190},
+  {"id": 3, "name": "Kolibris", "color": [0, 0, 255], "points": 1}
+]
