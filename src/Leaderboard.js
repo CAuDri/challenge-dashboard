@@ -55,6 +55,13 @@ function Leaderboard() {
           },
         },
       },
+      x: {
+        ticks: {
+          font: {
+            size: 25,
+          },
+        },
+      },
     },
   };
 
@@ -74,9 +81,9 @@ function Leaderboard() {
   };
 
   return (
-    <div className="leaderboard">
+    <div className="leaderboard" >
       <Bar options={options} data={data} />
-    </div>
+    </div >
   );
 }
 
