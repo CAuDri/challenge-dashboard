@@ -47,6 +47,15 @@ function Leaderboard() {
       },
     },
     responsive: true,
+    scales: {
+      y: {
+        ticks: {
+          font: {
+            size: 30,
+          },
+        },
+      },
+    },
   };
 
   const labels = teams.map((team) => team.name);
