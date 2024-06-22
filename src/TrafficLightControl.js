@@ -20,6 +20,7 @@ function TrafficLightControl() {
       <button onClick={() => changeState("red")}>Red</button>
       <button onClick={() => changeState("yellow")}>Yellow</button>
       <button onClick={() => changeState("green")}>Green</button>
+      <button onClick={() => changeState("off")} style={{ marginLeft: "10px" }}>Off</button>
     </div>
   );
 }
