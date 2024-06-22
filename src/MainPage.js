@@ -5,7 +5,7 @@ import Timer from "./Timer";
 function MainPage() {
   return (
     <div>
-      <h1>Countdown Timer</h1>
+      <img src="caudri_logo.jpeg" alt="Logo" width="300" />
       <div className='container'>
         <Leaderboard />
         <Timer />
