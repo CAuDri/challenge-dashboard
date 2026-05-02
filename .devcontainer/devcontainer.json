@@ -13,7 +13,8 @@
         "esbenp.prettier-vscode",
         "bradlc.vscode-tailwindcss",
         "Prisma.prisma",
-        "seunlanlege.action-buttons"
+        "seunlanlege.action-buttons",
+        "mhutchie.git-graph"
       ],
       "settings": {
         "editor.formatOnSave": true,
