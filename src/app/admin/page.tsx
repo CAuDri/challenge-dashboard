@@ -2,15 +2,23 @@ import { AdminHeader } from "@/components/admin/AdminHeader";
 import { ScreenSelectionPanel } from "@/components/admin/ScreenSelectionPanel";
 import { TeamScorePanel } from "@/components/admin/TeamScorePanel";
 import { TimerControlBar } from "@/components/admin/TimerControlBar";
+import {
+  dashboardContentClassName,
+  dashboardGridClassName,
+} from "@/config/layout";
 
 export default function AdminPage() {
   return (
     <main className="flex min-h-screen flex-col bg-slate-950 text-slate-50">
       <AdminHeader />
 
-      <TimerControlBar />
+      <div className={dashboardContentClassName}>
+        <TimerControlBar />
+      </div>
 
-      <div className="mx-auto grid w-full max-w-[1800px] flex-1 grid-cols-1 gap-6 overflow-hidden p-6 xl:grid-cols-[minmax(420px,1fr)_minmax(0,2fr)]">
+      <div
+        className={`${dashboardContentClassName} ${dashboardGridClassName} flex-1 overflow-hidden py-6`}
+      >
         <TeamScorePanel />
         <ScreenSelectionPanel />
       </div>

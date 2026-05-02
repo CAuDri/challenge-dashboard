@@ -5,7 +5,7 @@ export default function HomePage() {
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-slate-50">
       <section className="w-full max-w-xl rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-2xl">
         <p className="text-sm font-medium uppercase tracking-[0.3em] text-cyan-300">
-          CAuDri Challenge
+          CAuDri-Challenge
         </p>
 
         <h1 className="mt-4 text-3xl font-bold">Dashboard</h1>
