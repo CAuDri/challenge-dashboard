@@ -1,6 +1,6 @@
 "use client";
 
-import { useCountdownTimer } from "@/hooks/useCountdownTimer";
+import { CountdownTimerState } from "@/types/timer";
 import { useAdminState } from "@/providers/AdminStateProvider";
 import { dashboardGridClassName } from "@/config/layout";
 

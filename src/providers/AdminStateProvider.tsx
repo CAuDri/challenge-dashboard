@@ -1,7 +1,9 @@
 "use client";
 
 import { createContext, useContext, useState, type ReactNode } from "react";
+import { demoScreens } from "@/config/demoScreens";
 import { useCountdownTimer } from "@/hooks/useCountdownTimer";
+import type { ScreenDefinition, ScreenDraft } from "@/types/screen";
 import {
   disciplines,
   type DisciplineId,
@@ -13,6 +15,7 @@ type CountdownTimerController = ReturnType<typeof useCountdownTimer>;
 
 type AdminStateContextValue = {
   timer: CountdownTimerController;
+
   teams: Team[];
   addTeam: (teamDraft: TeamDraft) => void;
   updateTeam: (teamId: string, teamDraft: TeamDraft) => void;
@@ -22,6 +25,13 @@ type AdminStateContextValue = {
     disciplineId: DisciplineId,
     score: number,
   ) => void;
+
+  screens: ScreenDefinition[];
+  activeScreenId: string;
+  addScreen: (screenDraft: ScreenDraft) => void;
+  updateScreen: (screenId: string, screenDraft: ScreenDraft) => void;
+  deleteScreen: (screenId: string) => void;
+  activateScreen: (screenId: string) => void;
 };
 
 const AdminStateContext = createContext<AdminStateContextValue | null>(null);
@@ -40,6 +50,7 @@ const initialTeams: Team[] = [
   {
     id: "demo-team-1",
     name: "KITcar",
+    logoScale: 1,
     participatingDisciplines: disciplines.map((discipline) => discipline.id),
     scores: createEmptyScores(disciplines.map((discipline) => discipline.id)),
   },
@@ -47,7 +58,11 @@ const initialTeams: Team[] = [
 
 export function AdminStateProvider({ children }: AdminStateProviderProps) {
   const timer = useCountdownTimer();
+
   const [teams, setTeams] = useState<Team[]>(initialTeams);
+
+  const [screens, setScreens] = useState<ScreenDefinition[]>(demoScreens);
+  const [activeScreenId, setActiveScreenId] = useState("fallback");
 
   function addTeam(teamDraft: TeamDraft) {
     const teamId = crypto.randomUUID();
@@ -124,15 +139,68 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
     );
   }
 
+  function addScreen(screenDraft: ScreenDraft) {
+    const screenId = crypto.randomUUID();
+
+    setScreens((currentScreens) => [
+      ...currentScreens,
+      {
+        id: screenId,
+        name: screenDraft.name,
+        description: screenDraft.description,
+        type: screenDraft.type,
+        thumbnailLabel: screenDraft.thumbnailLabel,
+      },
+    ]);
+  }
+
+  function updateScreen(screenId: string, screenDraft: ScreenDraft) {
+    setScreens((currentScreens) =>
+      currentScreens.map((screen) =>
+        screen.id === screenId
+          ? {
+              ...screen,
+              name: screenDraft.name,
+              description: screenDraft.description,
+              type: screenDraft.type,
+              thumbnailLabel: screenDraft.thumbnailLabel,
+            }
+          : screen,
+      ),
+    );
+  }
+
+  function deleteScreen(screenId: string) {
+    setScreens((currentScreens) =>
+      currentScreens.filter((screen) => screen.id !== screenId),
+    );
+
+    setActiveScreenId((currentActiveScreenId) =>
+      currentActiveScreenId === screenId ? "fallback" : currentActiveScreenId,
+    );
+  }
+
+  function activateScreen(screenId: string) {
+    setActiveScreenId(screenId);
+  }
+
   return (
     <AdminStateContext.Provider
       value={{
         timer,
+
         teams,
         addTeam,
         updateTeam,
         deleteTeam,
         updateTeamScore,
+
+        screens,
+        activeScreenId,
+        addScreen,
+        updateScreen,
+        deleteScreen,
+        activateScreen,
       }}
     >
       {children}
