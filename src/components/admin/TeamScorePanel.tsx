@@ -98,7 +98,7 @@ export function TeamScorePanel() {
   }
 
   return (
-    <section className="flex h-full flex-col rounded-3xl border border-slate-800 bg-slate-900 text-slate-50 shadow-xl">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden bg-slate-900 text-slate-50">
       <header className="flex items-center justify-between gap-4 border-b border-slate-800 px-5 py-4">
         <div>
           <h2 className="text-xl font-bold">Teams & Punkte</h2>

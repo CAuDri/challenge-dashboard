@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import { Rajdhani } from "next/font/google";
+import { Rajdhani, Geist } from "next/font/google";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const rajdhani = Rajdhani({
   variable: "--font-rajdhani",
@@ -19,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="de">
+    <html lang="de" className={cn("font-sans", geist.variable)}>
       <body className={`${rajdhani.variable} antialiased`}>{children}</body>
     </html>
   );

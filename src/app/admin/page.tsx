@@ -1,11 +1,7 @@
 import { AdminHeader } from "@/components/admin/AdminHeader";
-import { ScreenSelectionPanel } from "@/components/admin/ScreenSelectionPanel";
-import { TeamScorePanel } from "@/components/admin/TeamScorePanel";
+import { AdminWorkspace } from "@/components/admin/AdminWorkspace";
 import { TimerControlBar } from "@/components/admin/TimerControlBar";
-import {
-  dashboardContentClassName,
-  dashboardGridClassName,
-} from "@/config/layout";
+import { dashboardContentClassName } from "@/config/layout";
 
 export default function AdminPage() {
   return (
@@ -16,11 +12,8 @@ export default function AdminPage() {
         <TimerControlBar />
       </div>
 
-      <div
-        className={`${dashboardContentClassName} ${dashboardGridClassName} flex-1 overflow-hidden py-6`}
-      >
-        <TeamScorePanel />
-        <ScreenSelectionPanel />
+      <div className={`${dashboardContentClassName} flex min-h-0 flex-1 py-6`}>
+        <AdminWorkspace />
       </div>
     </main>
   );

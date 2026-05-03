@@ -5,3 +5,14 @@ export type CountdownTimerState = {
   durationMs: number;
   remainingMs: number;
 };
+
+export type TimerDisplayTime = {
+  minutes: number;
+  seconds: number;
+  milliseconds: number;
+};
+
+export type TimerDigits = {
+  tens: number;
+  ones: number;
+};
