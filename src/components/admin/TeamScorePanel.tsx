@@ -1,191 +1,101 @@
 "use client";
 
 import { useState } from "react";
-import { disciplines, type DisciplineId, type Team } from "@/types/team";
-
-function createEmptyScores() {
-  return {
-    freedrive: 0,
-    obstacle_evasion: 0,
-    navigation: 0,
-  };
-}
-
-function createDemoTeam(index: number): Team {
-  return {
-    id: crypto.randomUUID(),
-    name: `Team ${index}`,
-    participatingDisciplines: disciplines.map((discipline) => discipline.id),
-    scores: createEmptyScores(),
-  };
-}
+import { TeamCard } from "@/components/admin/TeamCard";
+import { TeamFormDialog } from "@/components/admin/TeamFormDialog";
+import { useAdminState } from "@/providers/AdminStateProvider";
+import type { Team, TeamDraft } from "@/types/team";
 
 export function TeamScorePanel() {
-  const [teams, setTeams] = useState<Team[]>([
-    {
-      id: "demo-team-1",
-      name: "KITcar",
-      participatingDisciplines: disciplines.map((discipline) => discipline.id),
-      scores: {
-        freedrive: 0,
-        obstacle_evasion: 0,
-        navigation: 0,
-      },
-    },
-  ]);
+  const { teams, addTeam, updateTeam, deleteTeam, updateTeamScore } =
+    useAdminState();
 
-  function handleAddTeam() {
-    setTeams((currentTeams) => [
-      ...currentTeams,
-      createDemoTeam(currentTeams.length + 1),
-    ]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [teamBeingEdited, setTeamBeingEdited] = useState<Team | undefined>();
+
+  const dialogMode = teamBeingEdited ? "edit" : "create";
+
+  function handleAddTeamClick() {
+    setTeamBeingEdited(undefined);
+    setDialogOpen(true);
   }
 
-  function handleTeamNameChange(teamId: string, name: string) {
-    setTeams((currentTeams) =>
-      currentTeams.map((team) =>
-        team.id === teamId
-          ? {
-              ...team,
-              name,
-            }
-          : team,
-      ),
-    );
+  function handleEditTeam(team: Team) {
+    setTeamBeingEdited(team);
+    setDialogOpen(true);
   }
 
-  function handleScoreChange(
-    teamId: string,
-    disciplineId: DisciplineId,
-    score: number,
-  ) {
-    setTeams((currentTeams) =>
-      currentTeams.map((team) =>
-        team.id === teamId
-          ? {
-              ...team,
-              scores: {
-                ...team.scores,
-                [disciplineId]: score,
-              },
-            }
-          : team,
-      ),
-    );
+  function handleSubmitTeam(teamDraft: TeamDraft) {
+    if (teamBeingEdited) {
+      updateTeam(teamBeingEdited.id, teamDraft);
+      return;
+    }
+
+    addTeam(teamDraft);
   }
 
-  function handleParticipationChange(
-    teamId: string,
-    disciplineId: DisciplineId,
-    participates: boolean,
-  ) {
-    setTeams((currentTeams) =>
-      currentTeams.map((team) => {
-        if (team.id !== teamId) {
-          return team;
-        }
+  function handleDialogOpenChange(open: boolean) {
+    setDialogOpen(open);
 
-        const nextDisciplines = participates
-          ? [...new Set([...team.participatingDisciplines, disciplineId])]
-          : team.participatingDisciplines.filter((id) => id !== disciplineId);
-
-        return {
-          ...team,
-          participatingDisciplines: nextDisciplines,
-        };
-      }),
-    );
+    if (!open) {
+      setTeamBeingEdited(undefined);
+    }
   }
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden bg-slate-900 text-slate-50">
       <header className="flex items-center justify-between gap-4 border-b border-slate-800 px-5 py-4">
         <div>
-          <h2 className="text-xl font-bold">Teams & Punkte</h2>
+          <h2 className="text-xl font-bold">Teams & Scores</h2>
           <p className="mt-1 text-sm text-slate-400">
-            Vorläufig lokal im Browser. Später persistent in der Datenbank.
+            Configure teams through the dialog. Enter scores directly on each
+            team card.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={handleAddTeam}
+          onClick={handleAddTeamClick}
           className="rounded-xl bg-cyan-400 px-4 py-2 font-semibold text-slate-950 transition hover:bg-cyan-300"
         >
-          Team hinzufügen
+          Add Team
         </button>
       </header>
 
-      <div className="flex-1 space-y-4 overflow-auto p-5">
-        {teams.map((team) => (
-          <article
-            key={team.id}
-            className="rounded-2xl border border-slate-800 bg-slate-950 p-4"
-          >
-            <label className="block">
-              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                Teamname
-              </span>
-              <input
-                type="text"
-                value={team.name}
-                onChange={(event) =>
-                  handleTeamNameChange(team.id, event.target.value)
-                }
-                className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 font-semibold text-slate-50 outline-none transition focus:border-cyan-400"
-              />
-            </label>
-
-            <div className="mt-4 space-y-3">
-              {disciplines.map((discipline) => {
-                const participates = team.participatingDisciplines.includes(
-                  discipline.id,
-                );
-
-                return (
-                  <div
-                    key={discipline.id}
-                    className="rounded-xl border border-slate-800 bg-slate-900 p-3"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <label className="flex items-center gap-2 text-sm font-medium text-slate-200">
-                        <input
-                          type="checkbox"
-                          checked={participates}
-                          onChange={(event) =>
-                            handleParticipationChange(
-                              team.id,
-                              discipline.id,
-                              event.target.checked,
-                            )
-                          }
-                          className="h-4 w-4 accent-cyan-400"
-                        />
-                        {discipline.name}
-                      </label>
-
-                      <input
-                        type="number"
-                        min={0}
-                        disabled={!participates}
-                        value={team.scores[discipline.id]}
-                        onChange={(event) =>
-                          handleScoreChange(
-                            team.id,
-                            discipline.id,
-                            Number(event.target.value),
-                          )
-                        }
-                        className="w-24 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-right font-mono text-lg font-bold text-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+      <div className="flex-1 overflow-auto p-5">
+        {teams.length === 0 ? (
+          <div className="flex h-full min-h-80 items-center justify-center rounded-3xl border border-dashed border-slate-700 bg-slate-950/40 text-center">
+            <div>
+              <p className="font-[family-name:var(--font-rajdhani)] text-3xl font-bold text-slate-300">
+                No teams yet
+              </p>
+              <p className="mt-2 text-sm text-slate-500">
+                Add the first team to start entering scores.
+              </p>
             </div>
-          </article>
-        ))}
+          </div>
+        ) : (
+          <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
+            {teams.map((team) => (
+              <TeamCard
+                key={team.id}
+                team={team}
+                onEdit={handleEditTeam}
+                onDelete={deleteTeam}
+                onScoreChange={updateTeamScore}
+              />
+            ))}
+          </div>
+        )}
       </div>
+
+      <TeamFormDialog
+        open={dialogOpen}
+        mode={dialogMode}
+        team={teamBeingEdited}
+        onOpenChange={handleDialogOpenChange}
+        onSubmit={handleSubmitTeam}
+      />
     </section>
   );
 }

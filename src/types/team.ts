@@ -5,14 +5,24 @@ export type DisciplineDefinition = {
   name: string;
 };
 
-export type TeamScoreMap = Record<DisciplineId, number>;
+export type TeamScoreMap = Partial<Record<DisciplineId, number>>;
 
 export type Team = {
   id: string;
   name: string;
   logoUrl?: string;
+  logoFileName?: string;
+  logoScale?: number;
   participatingDisciplines: DisciplineId[];
   scores: TeamScoreMap;
+};
+
+export type TeamDraft = {
+  name: string;
+  logoUrl?: string;
+  logoFileName?: string;
+  logoScale?: number;
+  participatingDisciplines: DisciplineId[];
 };
 
 export const disciplines: DisciplineDefinition[] = [
