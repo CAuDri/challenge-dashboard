@@ -1,7 +1,14 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import { demoScreens } from "@/config/demoScreens";
+import { useDisplayStateSocket } from "@/hooks/useDisplayStateSocket";
 import { useCountdownTimer } from "@/hooks/useCountdownTimer";
 import type { ScreenDefinition, ScreenDraft } from "@/types/screen";
 import {
@@ -10,7 +17,6 @@ import {
   type Team,
   type TeamDraft,
 } from "@/types/team";
-import { useDisplayStateSocket } from "@/hooks/useDisplayStateSocket";
 
 type CountdownTimerController = ReturnType<typeof useCountdownTimer>;
 
@@ -65,7 +71,14 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
   const [screens, setScreens] = useState<ScreenDefinition[]>(demoScreens);
   const [activeScreenId, setActiveScreenId] = useState("fallback");
 
-  const { setActiveScreen } = useDisplayStateSocket();
+  const { publishDisplayState } = useDisplayStateSocket();
+
+  useEffect(() => {
+    publishDisplayState({
+      activeScreenId,
+      screens,
+    });
+  }, [activeScreenId, screens, publishDisplayState]);
 
   function addTeam(teamDraft: TeamDraft) {
     const teamId = crypto.randomUUID();
@@ -153,6 +166,7 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
         description: screenDraft.description,
         type: screenDraft.type,
         thumbnailLabel: screenDraft.thumbnailLabel,
+        config: screenDraft.config,
       },
     ]);
   }
@@ -167,6 +181,7 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
               description: screenDraft.description,
               type: screenDraft.type,
               thumbnailLabel: screenDraft.thumbnailLabel,
+              config: screenDraft.config,
             }
           : screen,
       ),
@@ -185,7 +200,6 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
 
   function activateScreen(screenId: string) {
     setActiveScreenId(screenId);
-    setActiveScreen(screenId);
   }
 
   return (

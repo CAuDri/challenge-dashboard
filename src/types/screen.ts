@@ -1,11 +1,20 @@
 export type ScreenType = "image" | "pdf" | "camera" | "timer" | "scoreboard";
 
+export type ImageScreenConfig = {
+  imageUrl?: string;
+};
+
+export type ScreenConfig = {
+  image?: ImageScreenConfig;
+};
+
 export type ScreenDefinition = {
   id: string;
   name: string;
   description: string;
   type: ScreenType;
   thumbnailLabel: string;
+  config?: ScreenConfig;
 };
 
 export type ScreenDraft = {
@@ -13,6 +22,7 @@ export type ScreenDraft = {
   description: string;
   type: ScreenType;
   thumbnailLabel: string;
+  config?: ScreenConfig;
 };
 
 export type ScreenTypeDefinition = {

@@ -1,10 +1,8 @@
 import { createServer } from "node:http";
 import next from "next";
 import { Server as SocketIOServer } from "socket.io";
-
-type DisplayState = {
-  activeScreenId: string;
-};
+import { demoScreens } from "../config/demoScreens";
+import type { DisplayState } from "../types/display";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = process.env.HOSTNAME ?? "0.0.0.0";
@@ -15,7 +13,21 @@ const handle = app.getRequestHandler();
 
 const displayState: DisplayState = {
   activeScreenId: "fallback",
+  screens: demoScreens,
 };
+
+function isValidDisplayState(payload: unknown): payload is DisplayState {
+  if (typeof payload !== "object" || payload === null) {
+    return false;
+  }
+
+  const candidate = payload as Partial<DisplayState>;
+
+  return (
+    typeof candidate.activeScreenId === "string" &&
+    Array.isArray(candidate.screens)
+  );
+}
 
 async function main() {
   await app.prepare();
@@ -37,6 +49,21 @@ async function main() {
       socket.emit("display:state", displayState);
     });
 
+    socket.on("display:set-state", (payload: unknown) => {
+      if (!isValidDisplayState(payload)) {
+        return;
+      }
+
+      displayState.activeScreenId = payload.activeScreenId;
+      displayState.screens = payload.screens;
+
+      io.emit("display:state", displayState);
+
+      console.log(
+        `[display] state updated: activeScreenId=${displayState.activeScreenId}, screens=${displayState.screens.length}`,
+      );
+    });
+
     socket.on(
       "display:set-active-screen",
       (payload: { screenId?: unknown }) => {
@@ -46,9 +73,7 @@ async function main() {
 
         displayState.activeScreenId = payload.screenId;
 
-        io.emit("display:active-screen-changed", {
-          activeScreenId: displayState.activeScreenId,
-        });
+        io.emit("display:state", displayState);
 
         console.log(
           `[display] active screen changed: ${displayState.activeScreenId}`,
@@ -62,7 +87,7 @@ async function main() {
   });
 
   httpServer.listen(port, hostname, () => {
-    console.log(`> CAuDri-Challenge dashboard ready`);
+    console.log("> CAuDri-Challenge dashboard ready");
     console.log(`> http://${hostname}:${port}`);
   });
 }

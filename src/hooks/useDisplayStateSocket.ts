@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { demoScreens } from "@/config/demoScreens";
 import { getSocketClient } from "@/lib/realtime/socketClient";
 import type { DisplayState } from "@/types/display";
 
 const initialDisplayState: DisplayState = {
   activeScreenId: "fallback",
+  screens: demoScreens,
 };
 
 export function useDisplayStateSocket() {
@@ -19,25 +21,23 @@ export function useDisplayStateSocket() {
       setDisplayState(state);
     }
 
-    function handleActiveScreenChanged(payload: { activeScreenId: string }) {
-      setDisplayState((currentState) => ({
-        ...currentState,
-        activeScreenId: payload.activeScreenId,
-      }));
-    }
-
     socket.on("display:state", handleDisplayState);
-    socket.on("display:active-screen-changed", handleActiveScreenChanged);
 
     socket.emit("display:request-state");
 
     return () => {
       socket.off("display:state", handleDisplayState);
-      socket.off("display:active-screen-changed", handleActiveScreenChanged);
     };
   }, []);
 
-  function setActiveScreen(screenId: string) {
+  const publishDisplayState = useCallback((nextDisplayState: DisplayState) => {
+    const socket = getSocketClient();
+
+    socket.emit("display:set-state", nextDisplayState);
+    setDisplayState(nextDisplayState);
+  }, []);
+
+  const setActiveScreen = useCallback((screenId: string) => {
     const socket = getSocketClient();
 
     socket.emit("display:set-active-screen", {
@@ -48,10 +48,11 @@ export function useDisplayStateSocket() {
       ...currentState,
       activeScreenId: screenId,
     }));
-  }
+  }, []);
 
   return {
     displayState,
+    publishDisplayState,
     setActiveScreen,
   };
 }
