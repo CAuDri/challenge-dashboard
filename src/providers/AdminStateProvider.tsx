@@ -10,6 +10,7 @@ import {
   type Team,
   type TeamDraft,
 } from "@/types/team";
+import { useDisplayStateSocket } from "@/hooks/useDisplayStateSocket";
 
 type CountdownTimerController = ReturnType<typeof useCountdownTimer>;
 
@@ -63,6 +64,8 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
 
   const [screens, setScreens] = useState<ScreenDefinition[]>(demoScreens);
   const [activeScreenId, setActiveScreenId] = useState("fallback");
+
+  const { setActiveScreen } = useDisplayStateSocket();
 
   function addTeam(teamDraft: TeamDraft) {
     const teamId = crypto.randomUUID();
@@ -182,6 +185,7 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
 
   function activateScreen(screenId: string) {
     setActiveScreenId(screenId);
+    setActiveScreen(screenId);
   }
 
   return (
