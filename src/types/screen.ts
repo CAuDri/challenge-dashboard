@@ -1,3 +1,5 @@
+import type { DisciplineId } from "@/types/team";
+
 export type ScreenType = "image" | "pdf" | "camera" | "timer" | "scoreboard";
 
 export type ImageScreenConfig = {
@@ -5,8 +7,14 @@ export type ImageScreenConfig = {
   imageFileName?: string;
 };
 
+export type ScoreboardScreenConfig = {
+  disciplineId: DisciplineId;
+  revealMode: "manual";
+};
+
 export type ScreenConfig = {
   image?: ImageScreenConfig;
+  scoreboard?: ScoreboardScreenConfig;
 };
 
 export type ScreenDefinition = {
@@ -56,6 +64,6 @@ export const screenTypes: ScreenTypeDefinition[] = [
   {
     id: "scoreboard",
     name: "Scoreboard",
-    description: "Dynamic ranking and score table.",
+    description: "Discipline-specific award reveal screen.",
   },
 ];

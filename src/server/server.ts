@@ -3,6 +3,7 @@ import next from "next";
 import { Server as SocketIOServer } from "socket.io";
 import { demoScreens } from "../config/demoScreens";
 import type { DisplayState } from "../types/display";
+import type { Team } from "../types/team";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = process.env.HOSTNAME ?? "0.0.0.0";
@@ -14,6 +15,7 @@ const handle = app.getRequestHandler();
 const displayState: DisplayState = {
   activeScreenId: "fallback",
   screens: demoScreens,
+  teams: [],
 };
 
 function isValidDisplayState(payload: unknown): payload is DisplayState {
@@ -25,7 +27,8 @@ function isValidDisplayState(payload: unknown): payload is DisplayState {
 
   return (
     typeof candidate.activeScreenId === "string" &&
-    Array.isArray(candidate.screens)
+    Array.isArray(candidate.screens) &&
+    Array.isArray(candidate.teams)
   );
 }
 
@@ -56,11 +59,12 @@ async function main() {
 
       displayState.activeScreenId = payload.activeScreenId;
       displayState.screens = payload.screens;
+      displayState.teams = payload.teams;
 
       io.emit("display:state", displayState);
 
       console.log(
-        `[display] state updated: activeScreenId=${displayState.activeScreenId}, screens=${displayState.screens.length}`,
+        `[display] state updated: activeScreenId=${displayState.activeScreenId}, screens=${displayState.screens.length}, teams=${displayState.teams.length}`,
       );
     });
 

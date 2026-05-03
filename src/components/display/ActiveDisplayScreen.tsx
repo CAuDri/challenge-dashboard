@@ -32,5 +32,7 @@ export function ActiveDisplayScreen() {
     );
   }
 
-  return <DisplayScreenRenderer screen={activeScreen} />;
+  return (
+    <DisplayScreenRenderer screen={activeScreen} teams={displayState.teams} />
+  );
 }

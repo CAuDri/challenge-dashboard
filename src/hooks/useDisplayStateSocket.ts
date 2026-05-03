@@ -8,6 +8,7 @@ import type { DisplayState } from "@/types/display";
 const initialDisplayState: DisplayState = {
   activeScreenId: "fallback",
   screens: demoScreens,
+  teams: [],
 };
 
 export function useDisplayStateSocket() {

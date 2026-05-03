@@ -1,9 +1,12 @@
 "use client";
 
 import type { ScreenDefinition } from "@/types/screen";
+import { ScoreboardDisplayScreen } from "@/components/display/ScoreboardDisplayScreen";
+import type { Team } from "@/types/team";
 
 type DisplayScreenRendererProps = {
   screen: ScreenDefinition;
+  teams: Team[];
 };
 
 function ImageDisplayScreen({ screen }: DisplayScreenRendererProps) {
@@ -71,15 +74,20 @@ function PlaceholderDisplayScreen({ screen }: DisplayScreenRendererProps) {
   );
 }
 
-export function DisplayScreenRenderer({ screen }: DisplayScreenRendererProps) {
+export function DisplayScreenRenderer({
+  screen,
+  teams,
+}: DisplayScreenRendererProps) {
   switch (screen.type) {
     case "image":
-      return <ImageDisplayScreen screen={screen} />;
+      return <ImageDisplayScreen screen={screen} teams={teams} />;
+
+    case "scoreboard":
+      return <ScoreboardDisplayScreen screen={screen} teams={teams} />;
 
     case "pdf":
     case "camera":
     case "timer":
-    case "scoreboard":
-      return <PlaceholderDisplayScreen screen={screen} />;
+      return <PlaceholderDisplayScreen screen={screen} teams={teams} />;
   }
 }

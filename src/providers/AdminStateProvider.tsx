@@ -77,8 +77,9 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
     publishDisplayState({
       activeScreenId,
       screens,
+      teams,
     });
-  }, [activeScreenId, screens, publishDisplayState]);
+  }, [activeScreenId, screens, teams, publishDisplayState]);
 
   function addTeam(teamDraft: TeamDraft) {
     const teamId = crypto.randomUUID();

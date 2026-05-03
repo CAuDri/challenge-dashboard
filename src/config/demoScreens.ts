@@ -9,11 +9,43 @@ export const demoScreens: ScreenDefinition[] = [
     thumbnailLabel: "Fallback",
   },
   {
-    id: "scoreboard",
-    name: "Scoreboard",
-    description: "Dynamic overview of the current team ranking.",
+    id: "scoreboard-freedrive",
+    name: "Freedrive Course Results",
+    description: "Manual reveal scoreboard for the Freedrive Course.",
     type: "scoreboard",
-    thumbnailLabel: "Scores",
+    thumbnailLabel: "Freedrive",
+    config: {
+      scoreboard: {
+        disciplineId: "freedrive",
+        revealMode: "manual",
+      },
+    },
+  },
+  {
+    id: "scoreboard-obstacle-evasion",
+    name: "Obstacle Evasion Course Results",
+    description: "Manual reveal scoreboard for the Obstacle Evasion Course.",
+    type: "scoreboard",
+    thumbnailLabel: "Obstacle",
+    config: {
+      scoreboard: {
+        disciplineId: "obstacle_evasion",
+        revealMode: "manual",
+      },
+    },
+  },
+  {
+    id: "scoreboard-navigation",
+    name: "Navigation Course Results",
+    description: "Manual reveal scoreboard for the Navigation Course.",
+    type: "scoreboard",
+    thumbnailLabel: "Navigation",
+    config: {
+      scoreboard: {
+        disciplineId: "navigation",
+        revealMode: "manual",
+      },
+    },
   },
   {
     id: "timer",
