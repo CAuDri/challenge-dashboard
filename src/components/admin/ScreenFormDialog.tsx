@@ -28,6 +28,9 @@ function createDefaultDraft(): ScreenDraft {
     description: "",
     type: "image",
     thumbnailLabel: "Image",
+    config: {
+      image: {},
+    },
   };
 }
 
@@ -41,6 +44,24 @@ function getDefaultThumbnailLabel(type: ScreenType) {
   };
 
   return labels[type];
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        reject(new Error("Failed to read file."));
+        return;
+      }
+
+      resolve(reader.result);
+    };
+
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
 
 export function ScreenFormDialog({
@@ -60,6 +81,7 @@ export function ScreenFormDialog({
       description: screen.description,
       type: screen.type,
       thumbnailLabel: screen.thumbnailLabel,
+      config: screen.config,
     };
   }, [screen]);
 
@@ -81,6 +103,45 @@ export function ScreenFormDialog({
       ...currentDraft,
       type,
       thumbnailLabel: getDefaultThumbnailLabel(type),
+      config:
+        type === "image"
+          ? {
+              ...currentDraft.config,
+              image: currentDraft.config?.image ?? {},
+            }
+          : currentDraft.config,
+    }));
+  }
+
+  async function handleImageFileChange(file: File | undefined) {
+    if (!file) {
+      return;
+    }
+
+    const allowedTypes = [
+      "image/svg+xml",
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      window.alert("Please select an SVG, PNG, JPG or WebP image.");
+      return;
+    }
+
+    const imageUrl = await readFileAsDataUrl(file);
+
+    setDraft((currentDraft) => ({
+      ...currentDraft,
+      config: {
+        ...currentDraft.config,
+        image: {
+          ...currentDraft.config?.image,
+          imageUrl,
+          imageFileName: file.name,
+        },
+      },
     }));
   }
 
@@ -183,6 +244,77 @@ export function ScreenFormDialog({
               })}
             </div>
           </div>
+
+          {draft.type === "image" && (
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                Image File
+              </span>
+
+              <div className="mt-2 grid gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-4 md:grid-cols-[minmax(0,1fr)_220px]">
+                <div className="flex flex-col justify-center gap-3">
+                  <input
+                    type="file"
+                    accept="image/svg+xml,image/png,image/jpeg,image/webp"
+                    onChange={(event) =>
+                      handleImageFileChange(event.target.files?.[0])
+                    }
+                    className="block w-full text-sm text-slate-400 file:mr-4 file:rounded-xl file:border-0 file:bg-cyan-400 file:px-4 file:py-2 file:font-semibold file:text-slate-950 hover:file:bg-cyan-300"
+                  />
+
+                  {draft.config?.image?.imageFileName && (
+                    <p className="text-sm text-slate-400">
+                      Selected:{" "}
+                      <span className="font-medium text-slate-200">
+                        {draft.config.image.imageFileName}
+                      </span>
+                    </p>
+                  )}
+
+                  {draft.config?.image?.imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDraft((currentDraft) => ({
+                          ...currentDraft,
+                          config: {
+                            ...currentDraft.config,
+                            image: {
+                              imageUrl: undefined,
+                              imageFileName: undefined,
+                            },
+                          },
+                        }))
+                      }
+                      className="w-fit text-sm font-semibold text-rose-300 transition hover:text-rose-200"
+                    >
+                      Remove image
+                    </button>
+                  )}
+
+                  <p className="text-xs leading-5 text-slate-500">
+                    The image is currently stored in browser state as a Data
+                    URL. Later this will be replaced by persistent file uploads.
+                  </p>
+                </div>
+
+                <div className="flex aspect-video items-center justify-center overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
+                  {draft.config?.image?.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={draft.config.image.imageUrl}
+                      alt=""
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-center text-xs uppercase tracking-[0.2em] text-slate-600">
+                      No Image
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <label className="block">
             <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
