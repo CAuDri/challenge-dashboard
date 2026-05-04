@@ -9,6 +9,18 @@ const initialDisplayState: DisplayState = {
   activeScreenId: "fallback",
   screens: demoScreens,
   teams: [],
+  currentRun: {
+    selectedTeamId: undefined,
+    selectedDisciplineId: undefined,
+    phase: "standby",
+    preparationDurationMs: 30 * 1000,
+    runDurationMs: 3 * 60 * 1000,
+  },
+  timer: {
+    status: "stopped",
+    durationMs: 3 * 60 * 1000,
+    remainingMs: 3 * 60 * 1000,
+  },
 };
 
 export function useDisplayStateSocket() {

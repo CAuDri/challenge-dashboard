@@ -33,6 +33,11 @@ export function ActiveDisplayScreen() {
   }
 
   return (
-    <DisplayScreenRenderer screen={activeScreen} teams={displayState.teams} />
+    <DisplayScreenRenderer
+      screen={activeScreen}
+      teams={displayState.teams}
+      currentRun={displayState.currentRun}
+      timer={displayState.timer}
+    />
   );
 }

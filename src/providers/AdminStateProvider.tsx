@@ -17,6 +17,11 @@ import {
   type Team,
   type TeamDraft,
 } from "@/types/team";
+import {
+  nextRunPhaseOrder,
+  type CurrentRunState,
+  type RunPhase,
+} from "@/types/run";
 
 type CountdownTimerController = ReturnType<typeof useCountdownTimer>;
 
@@ -39,6 +44,19 @@ type AdminStateContextValue = {
   updateScreen: (screenId: string, screenDraft: ScreenDraft) => void;
   deleteScreen: (screenId: string) => void;
   activateScreen: (screenId: string) => void;
+
+  currentRun: CurrentRunState;
+  setCurrentRunTeamId: (teamId: string | undefined) => void;
+  selectNextRunTeam: (direction: -1 | 1) => void;
+  setCurrentRunDisciplineId: (disciplineId: DisciplineId | undefined) => void;
+  setRunPhase: (phase: RunPhase) => void;
+  advanceRunPhase: () => void;
+  setPreparationDurationMs: (durationMs: number) => void;
+  setRunDurationMs: (durationMs: number) => void;
+  autoEndRunWhenTimerFinished: boolean;
+  setAutoEndRunWhenTimerFinished: (enabled: boolean) => void;
+  startCurrentRunTimer: () => void;
+  endCurrentRun: () => void;
 };
 
 const AdminStateContext = createContext<AdminStateContextValue | null>(null);
@@ -72,6 +90,17 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
   const [screens, setScreens] = useState<ScreenDefinition[]>(demoScreens);
   const [activeScreenId, setActiveScreenId] = useState("fallback");
 
+  const [currentRun, setCurrentRun] = useState<CurrentRunState>({
+    selectedTeamId: initialTeams[0]?.id,
+    selectedDisciplineId: "freedrive",
+    phase: "standby",
+    preparationDurationMs: 30 * 1000,
+    runDurationMs: 3 * 60 * 1000,
+  });
+
+  const [autoEndRunWhenTimerFinished, setAutoEndRunWhenTimerFinished] =
+    useState(false);
+
   const { publishDisplayState } = useDisplayStateSocket();
 
   useEffect(() => {
@@ -79,8 +108,17 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
       activeScreenId,
       screens,
       teams,
+      currentRun,
+      timer: timer.timer,
     });
-  }, [activeScreenId, screens, teams, publishDisplayState]);
+  }, [
+    activeScreenId,
+    screens,
+    teams,
+    currentRun,
+    timer.timer,
+    publishDisplayState,
+  ]);
 
   function addTeam(teamDraft: TeamDraft) {
     const teamId = crypto.randomUUID();
@@ -206,6 +244,119 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
     setActiveScreenId(screenId);
   }
 
+  function setCurrentRunTeamId(teamId: string | undefined) {
+    setCurrentRun((currentRunState) => ({
+      ...currentRunState,
+      selectedTeamId: teamId,
+    }));
+  }
+
+  function selectNextRunTeam(direction: -1 | 1) {
+    setCurrentRun((currentRunState) => {
+      if (teams.length === 0) {
+        return {
+          ...currentRunState,
+          selectedTeamId: undefined,
+        };
+      }
+
+      const currentIndex = teams.findIndex(
+        (team) => team.id === currentRunState.selectedTeamId,
+      );
+
+      const safeCurrentIndex = currentIndex === -1 ? 0 : currentIndex;
+      const nextIndex =
+        (safeCurrentIndex + direction + teams.length) % teams.length;
+
+      return {
+        ...currentRunState,
+        selectedTeamId: teams[nextIndex].id,
+      };
+    });
+  }
+
+  function setCurrentRunDisciplineId(disciplineId: DisciplineId | undefined) {
+    setCurrentRun((currentRunState) => ({
+      ...currentRunState,
+      selectedDisciplineId: disciplineId,
+    }));
+  }
+
+  function setRunPhase(phase: RunPhase) {
+    if (phase === "preparation") {
+      timer.setDurationMs(currentRun.preparationDurationMs);
+    }
+
+    if (phase === "ready") {
+      timer.setDurationMs(currentRun.runDurationMs);
+    }
+
+    if (phase === "running" && currentRun.phase !== "ready") {
+      timer.setDurationMs(currentRun.runDurationMs);
+    }
+
+    setCurrentRun((currentRunState) => ({
+      ...currentRunState,
+      phase,
+    }));
+  }
+
+  function advanceRunPhase() {
+    const currentIndex = nextRunPhaseOrder.indexOf(currentRun.phase);
+    const safeCurrentIndex = currentIndex === -1 ? 0 : currentIndex;
+    const nextPhase =
+      nextRunPhaseOrder[(safeCurrentIndex + 1) % nextRunPhaseOrder.length];
+
+    setRunPhase(nextPhase);
+  }
+
+  function setPreparationDurationMs(durationMs: number) {
+    setCurrentRun((currentRunState) => ({
+      ...currentRunState,
+      preparationDurationMs: Math.max(0, Math.round(durationMs)),
+    }));
+  }
+
+  function setRunDurationMs(durationMs: number) {
+    setCurrentRun((currentRunState) => ({
+      ...currentRunState,
+      runDurationMs: Math.max(0, Math.round(durationMs)),
+    }));
+  }
+
+  function startCurrentRunTimer() {
+    if (currentRun.phase === "ready") {
+      setCurrentRun((currentRunState) => ({
+        ...currentRunState,
+        phase: "running",
+      }));
+    }
+
+    timer.startTimer();
+  }
+
+  function endCurrentRun() {
+    timer.pauseTimer();
+
+    setCurrentRun((currentRunState) => ({
+      ...currentRunState,
+      phase: "finish",
+    }));
+  }
+
+  useEffect(() => {
+    if (
+      autoEndRunWhenTimerFinished &&
+      currentRun.phase === "running" &&
+      timer.timer.status === "finished"
+    ) {
+      setCurrentRun((currentRunState) => ({
+        ...currentRunState,
+        phase: "finish",
+      }));
+    }
+  }, [autoEndRunWhenTimerFinished, currentRun.phase, timer.timer.status]);
+
   return (
     <AdminStateContext.Provider
       value={{
@@ -223,6 +374,19 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
         updateScreen,
         deleteScreen,
         activateScreen,
+
+        currentRun,
+        setCurrentRunTeamId,
+        selectNextRunTeam,
+        setCurrentRunDisciplineId,
+        setRunPhase,
+        advanceRunPhase,
+        setPreparationDurationMs,
+        setRunDurationMs,
+        autoEndRunWhenTimerFinished,
+        setAutoEndRunWhenTimerFinished,
+        startCurrentRunTimer,
+        endCurrentRun,
       }}
     >
       {children}

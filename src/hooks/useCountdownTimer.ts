@@ -231,6 +231,19 @@ export function useCountdownTimer(initialDurationMs = DEFAULT_DURATION_MS) {
     }));
   }, []);
 
+  const setDurationMs = useCallback((durationMs: number) => {
+    const safeDurationMs = Math.max(0, Math.round(durationMs));
+
+    targetEndTimeRef.current = null;
+
+    setTimer((currentTimer) => ({
+      ...currentTimer,
+      status: "stopped",
+      durationMs: safeDurationMs,
+      remainingMs: safeDurationMs,
+    }));
+  }, []);
+
   return {
     timer,
     displayedTime,
@@ -243,6 +256,7 @@ export function useCountdownTimer(initialDurationMs = DEFAULT_DURATION_MS) {
     canReset,
     changeMinutes,
     changeSeconds,
+    setDurationMs,
     startTimer,
     pauseTimer,
     resetTimer,

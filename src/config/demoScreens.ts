@@ -9,6 +9,30 @@ export const demoScreens: ScreenDefinition[] = [
     thumbnailLabel: "Fallback",
   },
   {
+    id: "timer-simple",
+    name: "Simple Timer",
+    description: "Fullscreen timer without additional run information.",
+    type: "timer",
+    thumbnailLabel: "Timer",
+    config: {
+      timer: {
+        layout: "timer_only",
+      },
+    },
+  },
+  {
+    id: "timer-run-info",
+    name: "Run Info Timer",
+    description: "Timer screen with current team, discipline and run phase.",
+    type: "timer",
+    thumbnailLabel: "Run Timer",
+    config: {
+      timer: {
+        layout: "run_info",
+      },
+    },
+  },
+  {
     id: "scoreboard-freedrive",
     name: "Freedrive Course Results",
     description: "Manual reveal scoreboard for the Freedrive Course.",
@@ -46,13 +70,6 @@ export const demoScreens: ScreenDefinition[] = [
         revealMode: "manual",
       },
     },
-  },
-  {
-    id: "timer",
-    name: "Lap Timer",
-    description: "Timer with team and discipline information.",
-    type: "timer",
-    thumbnailLabel: "Timer",
   },
   {
     id: "presentation",

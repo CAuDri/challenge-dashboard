@@ -15,6 +15,7 @@ export type ScoreboardScreenConfig = {
 export type ScreenConfig = {
   image?: ImageScreenConfig;
   scoreboard?: ScoreboardScreenConfig;
+  timer?: TimerScreenConfig;
 };
 
 export type ScreenDefinition = {
@@ -38,6 +39,12 @@ export type ScreenTypeDefinition = {
   id: ScreenType;
   name: string;
   description: string;
+};
+
+export type TimerScreenLayout = "timer_only" | "run_info";
+
+export type TimerScreenConfig = {
+  layout: TimerScreenLayout;
 };
 
 export const screenTypes: ScreenTypeDefinition[] = [

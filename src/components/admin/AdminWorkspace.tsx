@@ -3,6 +3,7 @@
 import { ScreenSelectionPanel } from "@/components/admin/ScreenSelectionPanel";
 import { TeamScorePanel } from "@/components/admin/TeamScorePanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RunControlPanel } from "@/components/admin/RunControlPanel";
 
 const tabTriggerClassName =
   "h-14 rounded-b-none rounded-t-2xl border border-b-0 border-slate-800 bg-slate-950 px-8 font-[family-name:var(--font-rajdhani)] text-xl font-bold uppercase tracking-wide text-slate-500 shadow-none transition " +
@@ -24,6 +25,10 @@ export function AdminWorkspace() {
           <TabsTrigger value="screens" className={tabTriggerClassName}>
             Screens
           </TabsTrigger>
+
+          <TabsTrigger value="run-control" className={tabTriggerClassName}>
+            Run Control
+          </TabsTrigger>
         </TabsList>
 
         <div className="hidden h-full items-center justify-end font-[family-name:var(--font-rajdhani)] text-sm font-semibold uppercase tracking-[0.3em] text-slate-600 md:flex">
@@ -43,6 +48,13 @@ export function AdminWorkspace() {
         className="m-0 min-h-0 flex-1 data-[state=inactive]:hidden"
       >
         <ScreenSelectionPanel />
+      </TabsContent>
+
+      <TabsContent
+        value="run-control"
+        className="m-0 min-h-0 flex-1 data-[state=inactive]:hidden"
+      >
+        <RunControlPanel />
       </TabsContent>
     </Tabs>
   );

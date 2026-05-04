@@ -17,6 +17,18 @@ const displayState: DisplayState = {
   activeScreenId: "fallback",
   screens: demoScreens,
   teams: [],
+  currentRun: {
+    selectedTeamId: undefined,
+    selectedDisciplineId: undefined,
+    phase: "standby",
+    preparationDurationMs: 30 * 1000,
+    runDurationMs: 3 * 60 * 1000,
+  },
+  timer: {
+    status: "stopped",
+    durationMs: 3 * 60 * 1000,
+    remainingMs: 3 * 60 * 1000,
+  },
 };
 
 function isValidDisplayState(payload: unknown): payload is DisplayState {
@@ -29,7 +41,11 @@ function isValidDisplayState(payload: unknown): payload is DisplayState {
   return (
     typeof candidate.activeScreenId === "string" &&
     Array.isArray(candidate.screens) &&
-    Array.isArray(candidate.teams)
+    Array.isArray(candidate.teams) &&
+    typeof candidate.currentRun === "object" &&
+    candidate.currentRun !== null &&
+    typeof candidate.timer === "object" &&
+    candidate.timer !== null
   );
 }
 
@@ -61,6 +77,8 @@ async function main() {
       displayState.activeScreenId = payload.activeScreenId;
       displayState.screens = payload.screens;
       displayState.teams = payload.teams;
+      displayState.currentRun = payload.currentRun;
+      displayState.timer = payload.timer;
 
       io.emit("display:state", displayState);
 

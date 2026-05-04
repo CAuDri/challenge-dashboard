@@ -1,15 +1,20 @@
 "use client";
 
-import type { ScreenDefinition } from "@/types/screen";
 import { ScoreboardDisplayScreen } from "@/components/display/ScoreboardDisplayScreen";
+import { TimerDisplayScreen } from "@/components/display/TimerDisplayScreen";
+import type { CurrentRunState } from "@/types/run";
+import type { ScreenDefinition } from "@/types/screen";
 import type { Team } from "@/types/team";
+import type { CountdownTimerState } from "@/types/timer";
 
 type DisplayScreenRendererProps = {
   screen: ScreenDefinition;
   teams: Team[];
+  currentRun: CurrentRunState;
+  timer: CountdownTimerState;
 };
 
-function ImageDisplayScreen({ screen }: DisplayScreenRendererProps) {
+function ImageDisplayScreen({ screen }: { screen: ScreenDefinition }) {
   const imageUrl = screen.config?.image?.imageUrl;
 
   if (imageUrl) {
@@ -44,7 +49,7 @@ function ImageDisplayScreen({ screen }: DisplayScreenRendererProps) {
   );
 }
 
-function PlaceholderDisplayScreen({ screen }: DisplayScreenRendererProps) {
+function PlaceholderDisplayScreen({ screen }: { screen: ScreenDefinition }) {
   return (
     <main className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 text-white">
       <section className="text-center">
@@ -77,17 +82,28 @@ function PlaceholderDisplayScreen({ screen }: DisplayScreenRendererProps) {
 export function DisplayScreenRenderer({
   screen,
   teams,
+  currentRun,
+  timer,
 }: DisplayScreenRendererProps) {
   switch (screen.type) {
     case "image":
-      return <ImageDisplayScreen screen={screen} teams={teams} />;
+      return <ImageDisplayScreen screen={screen} />;
 
     case "scoreboard":
       return <ScoreboardDisplayScreen screen={screen} teams={teams} />;
 
+    case "timer":
+      return (
+        <TimerDisplayScreen
+          screen={screen}
+          timer={timer}
+          currentRun={currentRun}
+          teams={teams}
+        />
+      );
+
     case "pdf":
     case "camera":
-    case "timer":
-      return <PlaceholderDisplayScreen screen={screen} teams={teams} />;
+      return <PlaceholderDisplayScreen screen={screen} />;
   }
 }
