@@ -76,6 +76,8 @@ const initialTeams: Team[] = [
     id: "demo-team-1",
     name: "CAuDri Team",
     logoScale: 1,
+    logoUrl: "/caudri_logo.svg",
+    logoFileName: "caudri_logo.svg",
     teamColor: "#22d3ee",
     participatingDisciplines: disciplines.map((discipline) => discipline.id),
     scores: createEmptyScores(disciplines.map((discipline) => discipline.id)),
@@ -99,7 +101,7 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
   });
 
   const [autoEndRunWhenTimerFinished, setAutoEndRunWhenTimerFinished] =
-    useState(false);
+    useState(true);
 
   const { publishDisplayState } = useDisplayStateSocket();
 

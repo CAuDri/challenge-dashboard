@@ -82,12 +82,12 @@ function TeamSelector({
         Team
       </p>
 
-      <div className="grid grid-cols-[48px_minmax(0,1fr)_48px] gap-2">
+      <div className="grid grid-cols-[52px_minmax(0,1fr)_52px] gap-2">
         <button
           type="button"
           onClick={() => onStepTeam(-1)}
           disabled={teams.length === 0}
-          className="rounded-xl border border-slate-700 bg-slate-950 font-bold text-slate-200 transition hover:border-cyan-400 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-30"
+          className="rounded-xl border border-slate-700 bg-slate-950 text-xl font-bold text-slate-200 transition hover:border-cyan-400 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-30"
         >
           ←
         </button>
@@ -96,7 +96,7 @@ function TeamSelector({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="flex min-h-20 items-center gap-4 rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-left transition hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+              className="flex min-h-24 items-center gap-4 rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-left transition hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
             >
               {selectedTeam ? (
                 <>
@@ -144,7 +144,7 @@ function TeamSelector({
           type="button"
           onClick={() => onStepTeam(1)}
           disabled={teams.length === 0}
-          className="rounded-xl border border-slate-700 bg-slate-950 font-bold text-slate-200 transition hover:border-cyan-400 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-30"
+          className="rounded-xl border border-slate-700 bg-slate-950 text-xl font-bold text-slate-200 transition hover:border-cyan-400 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-30"
         >
           →
         </button>
@@ -159,6 +159,48 @@ type DurationStepperProps = {
   onChange: (durationMs: number) => void;
 };
 
+type VerticalStepperProps = {
+  label: string;
+  value: string;
+  onIncrement: () => void;
+  onDecrement: () => void;
+};
+
+function VerticalStepper({
+  label,
+  value,
+  onIncrement,
+  onDecrement,
+}: VerticalStepperProps) {
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+        {label}
+      </span>
+
+      <button
+        type="button"
+        onClick={onIncrement}
+        className="flex h-8 w-12 items-center justify-center rounded-lg border border-slate-700 bg-slate-950 text-xs text-slate-300 transition hover:border-cyan-400 hover:text-cyan-100"
+      >
+        ▲
+      </button>
+
+      <div className="min-w-[4.5rem] text-center font-mono text-4xl font-bold tabular-nums text-cyan-100">
+        {value}
+      </div>
+
+      <button
+        type="button"
+        onClick={onDecrement}
+        className="flex h-8 w-12 items-center justify-center rounded-lg border border-slate-700 bg-slate-950 text-xs text-slate-300 transition hover:border-cyan-400 hover:text-cyan-100"
+      >
+        ▼
+      </button>
+    </div>
+  );
+}
+
 function DurationStepper({ label, valueMs, onChange }: DurationStepperProps) {
   const { minutes, seconds } = formatDuration(valueMs);
 
@@ -167,66 +209,30 @@ function DurationStepper({ label, valueMs, onChange }: DurationStepperProps) {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
-      <p className="font-[family-name:var(--font-rajdhani)] text-base font-bold uppercase tracking-[0.25em] text-cyan-300">
+    <div className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
+      <p className="font-[family-name:var(--font-rajdhani)] text-2xl font-bold uppercase tracking-wide text-cyan-100">
         {label}
       </p>
 
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-600">
-            Minutes
-          </p>
+      <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950 px-5 py-4">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+          <VerticalStepper
+            label="Min"
+            value={minutes.toString()}
+            onIncrement={() => updateDuration(60_000)}
+            onDecrement={() => updateDuration(-60_000)}
+          />
 
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => updateDuration(-60_000)}
-              className="h-9 w-9 rounded-lg border border-slate-700 bg-slate-950 font-bold text-slate-300 transition hover:border-cyan-400 hover:text-cyan-100"
-            >
-              −
-            </button>
+          <span className="pt-6 font-mono text-5xl font-bold text-slate-600">
+            :
+          </span>
 
-            <span className="font-mono text-2xl font-bold tabular-nums text-cyan-100">
-              {minutes}
-            </span>
-
-            <button
-              type="button"
-              onClick={() => updateDuration(60_000)}
-              className="h-9 w-9 rounded-lg border border-slate-700 bg-slate-950 font-bold text-slate-300 transition hover:border-cyan-400 hover:text-cyan-100"
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-600">
-            Seconds
-          </p>
-
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => updateDuration(-30_000)}
-              className="h-9 w-9 rounded-lg border border-slate-700 bg-slate-950 font-bold text-slate-300 transition hover:border-cyan-400 hover:text-cyan-100"
-            >
-              −
-            </button>
-
-            <span className="font-mono text-2xl font-bold tabular-nums text-cyan-100">
-              {seconds.toString().padStart(2, "0")}
-            </span>
-
-            <button
-              type="button"
-              onClick={() => updateDuration(30_000)}
-              className="h-9 w-9 rounded-lg border border-slate-700 bg-slate-950 font-bold text-slate-300 transition hover:border-cyan-400 hover:text-cyan-100"
-            >
-              +
-            </button>
-          </div>
+          <VerticalStepper
+            label="Sec"
+            value={seconds.toString().padStart(2, "0")}
+            onIncrement={() => updateDuration(30_000)}
+            onDecrement={() => updateDuration(-30_000)}
+          />
         </div>
       </div>
     </div>
@@ -251,7 +257,6 @@ function getPhaseVisualState(
 } {
   const isRunningVisual = phase === "ready" && currentPhase === "running";
   const active = currentPhase === phase || isRunningVisual;
-
   const visualPhase = isRunningVisual ? "running" : phase;
 
   const styles: Record<
@@ -259,10 +264,10 @@ function getPhaseVisualState(
     { active: string; inactive: string; accent: string }
   > = {
     standby: {
-      active: "border-rose-400 bg-rose-500/20 text-rose-100 shadow-rose-950/30",
+      active: "border-rose-500 bg-rose-500/25 text-rose-50 shadow-rose-950/40",
       inactive:
-        "border-slate-800 bg-slate-950 text-slate-400 hover:border-rose-400/60 hover:text-rose-100",
-      accent: "bg-rose-400",
+        "border-slate-800 bg-slate-950 text-slate-400 hover:border-rose-500/60 hover:text-rose-100",
+      accent: "bg-rose-500",
     },
     preparation: {
       active:
@@ -279,16 +284,16 @@ function getPhaseVisualState(
     },
     running: {
       active:
-        "border-emerald-400 bg-emerald-500/20 text-emerald-100 shadow-emerald-950/30",
+        "border-emerald-500 bg-emerald-500/25 text-emerald-50 shadow-emerald-950/40",
       inactive:
-        "border-slate-800 bg-slate-950 text-slate-400 hover:border-emerald-400/60 hover:text-emerald-100",
-      accent: "bg-emerald-400",
+        "border-slate-800 bg-slate-950 text-slate-400 hover:border-emerald-500/60 hover:text-emerald-100",
+      accent: "bg-emerald-500",
     },
     finish: {
-      active: "border-rose-400 bg-rose-500/20 text-rose-100 shadow-rose-950/30",
+      active: "border-rose-500 bg-rose-500/25 text-rose-50 shadow-rose-950/40",
       inactive:
-        "border-slate-800 bg-slate-950 text-slate-400 hover:border-rose-400/60 hover:text-rose-100",
-      accent: "bg-rose-400",
+        "border-slate-800 bg-slate-950 text-slate-400 hover:border-rose-500/60 hover:text-rose-100",
+      accent: "bg-rose-500",
     },
   };
 
@@ -298,6 +303,14 @@ function getPhaseVisualState(
     className: active ? styles[visualPhase].active : styles[phase].inactive,
     accentClassName: styles[visualPhase].accent,
   };
+}
+
+function PhaseConnector() {
+  return (
+    <div className="flex items-center justify-center">
+      <span className="h-px w-full min-w-10 bg-slate-700" />
+    </div>
+  );
 }
 
 export function RunControlPanel() {
@@ -385,17 +398,13 @@ export function RunControlPanel() {
                     onClick={() => handlePhaseChange(phase)}
                     className={`relative min-h-28 overflow-hidden rounded-3xl border px-5 py-4 text-center font-[family-name:var(--font-rajdhani)] text-2xl font-bold uppercase tracking-wide shadow-xl transition ${visualState.className}`}
                   >
-                    <span
-                      className={`absolute inset-x-0 top-0 h-1 ${visualState.accentClassName}`}
-                    />
                     <span className="block">{visualState.label}</span>
+                    <span
+                      className={`absolute inset-x-0 bottom-0 h-1.5 ${visualState.accentClassName}`}
+                    />
                   </button>
 
-                  {index < visiblePhaseOrder.length - 1 && (
-                    <div className="flex items-center justify-center">
-                      <span className="h-px w-14 bg-slate-700" />
-                    </div>
-                  )}
+                  {index < visiblePhaseOrder.length - 1 && <PhaseConnector />}
                 </div>
               );
             })}
@@ -432,69 +441,76 @@ export function RunControlPanel() {
 
         <section className="mt-5 rounded-3xl border border-slate-800 bg-slate-950/50 p-5">
           <h3 className="font-[family-name:var(--font-rajdhani)] text-2xl font-bold uppercase tracking-wide text-cyan-100">
-            Current Run
+            Configuration
           </h3>
 
-          <div className="mt-4 grid gap-5 xl:grid-cols-[minmax(360px,0.9fr)_minmax(420px,1.1fr)]">
-            <div className="space-y-4">
-              <TeamSelector
-                teams={teams}
-                selectedTeam={selectedTeam}
-                onSelectTeam={setCurrentRunTeamId}
-                onStepTeam={selectNextRunTeam}
-              />
+          <div className="mt-4 grid gap-5 xl:grid-cols-[minmax(360px,1fr)_minmax(420px,1.05fr)_minmax(300px,0.75fr)]">
+            <section className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
+              <div className="space-y-5">
+                <TeamSelector
+                  teams={teams}
+                  selectedTeam={selectedTeam}
+                  onSelectTeam={setCurrentRunTeamId}
+                  onStepTeam={selectNextRunTeam}
+                />
 
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-                  Discipline
-                </p>
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                    Discipline
+                  </p>
 
-                <select
-                  value={currentRun.selectedDisciplineId ?? ""}
-                  onChange={(event) =>
-                    setCurrentRunDisciplineId(
-                      (event.target.value || undefined) as
-                        | DisciplineId
-                        | undefined,
-                    )
-                  }
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-400"
-                >
-                  <option value="">No discipline selected</option>
-                  {disciplines.map((discipline) => (
-                    <option key={discipline.id} value={discipline.id}>
-                      {discipline.name}
-                    </option>
-                  ))}
-                </select>
+                  <select
+                    value={currentRun.selectedDisciplineId ?? ""}
+                    onChange={(event) =>
+                      setCurrentRunDisciplineId(
+                        (event.target.value || undefined) as
+                          | DisciplineId
+                          | undefined,
+                      )
+                    }
+                    className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 outline-none transition focus:border-cyan-400"
+                  >
+                    <option value="">No discipline selected</option>
+                    {disciplines.map((discipline) => (
+                      <option key={discipline.id} value={discipline.id}>
+                        {discipline.name}
+                      </option>
+                    ))}
+                  </select>
 
-                {!selectedTeamParticipates &&
-                  selectedDiscipline &&
-                  selectedTeam && (
-                    <div className="mt-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-                      Warning: {selectedTeam.name} is not marked as
-                      participating in {selectedDiscipline.name}.
-                    </div>
-                  )}
+                  {!selectedTeamParticipates &&
+                    selectedDiscipline &&
+                    selectedTeam && (
+                      <div className="mt-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                        Warning: {selectedTeam.name} is not marked as
+                        participating in {selectedDiscipline.name}.
+                      </div>
+                    )}
+                </div>
               </div>
-            </div>
+            </section>
 
-            <div className="grid gap-4">
-              <div className="grid gap-4 md:grid-cols-2">
+            <section className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                 <DurationStepper
-                  label="Preparation"
+                  label="Preparation Timer"
                   valueMs={currentRun.preparationDurationMs}
                   onChange={setPreparationDurationMs}
                 />
 
                 <DurationStepper
-                  label="Run"
+                  label="Run Timer"
                   valueMs={currentRun.runDurationMs}
                   onChange={setRunDurationMs}
                 />
               </div>
+            </section>
 
-              <label className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-300">
+            <section className="rounded-3xl border border-slate-800 bg-slate-950 p-5">
+              <label
+                title="Automatically switch to Finish when the run timer reaches zero"
+                className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 px-4 py-4 text-sm text-slate-300"
+              >
                 <input
                   type="checkbox"
                   checked={autoEndRunWhenTimerFinished}
@@ -503,9 +519,12 @@ export function RunControlPanel() {
                   }
                   className="h-4 w-4 accent-cyan-400"
                 />
-                End run when time is over
+
+                <span className="font-medium text-slate-200">
+                  Finish run when the timer expires
+                </span>
               </label>
-            </div>
+            </section>
           </div>
         </section>
       </div>
