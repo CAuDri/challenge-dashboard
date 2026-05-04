@@ -9,12 +9,12 @@
         "color": "green",
         "singleInstance": true,
         "cwd": "${workspaceFolder}",
-        "command": "pnpm dev --hostname 0.0.0.0"
+        "command": "pnpm dev"
       },
       {
         "name": "$(debug-stop) Stop Dashboard",
         "color": "#aa0202",
-        "command": "pkill -f 'next dev' || true"
+        "command": "pkill -f 'server.ts' || true"
       }
     ]
   }
