@@ -56,8 +56,9 @@ function createEmptyScores(participatingDisciplines: DisciplineId[]) {
 const initialTeams: Team[] = [
   {
     id: "demo-team-1",
-    name: "KITcar",
+    name: "CAuDri Team",
     logoScale: 1,
+    teamColor: "#22d3ee",
     participatingDisciplines: disciplines.map((discipline) => discipline.id),
     scores: createEmptyScores(disciplines.map((discipline) => discipline.id)),
   },
@@ -92,6 +93,7 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
         logoUrl: teamDraft.logoUrl,
         logoFileName: teamDraft.logoFileName,
         logoScale: teamDraft.logoScale ?? 1,
+        teamColor: teamDraft.teamColor,
         participatingDisciplines: teamDraft.participatingDisciplines,
         scores: createEmptyScores(teamDraft.participatingDisciplines),
       },
@@ -123,6 +125,7 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
           logoUrl: teamDraft.logoUrl,
           logoFileName: teamDraft.logoFileName,
           logoScale: teamDraft.logoScale ?? 1,
+          teamColor: teamDraft.teamColor ?? "#22d3ee",
           participatingDisciplines: teamDraft.participatingDisciplines,
           scores: nextScores,
         };

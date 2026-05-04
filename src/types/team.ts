@@ -13,6 +13,7 @@ export type Team = {
   logoUrl?: string;
   logoFileName?: string;
   logoScale?: number;
+  teamColor?: string;
   participatingDisciplines: DisciplineId[];
   scores: TeamScoreMap;
 };
@@ -22,6 +23,7 @@ export type TeamDraft = {
   logoUrl?: string;
   logoFileName?: string;
   logoScale?: number;
+  teamColor?: string;
   participatingDisciplines: DisciplineId[];
 };
 

@@ -39,7 +39,7 @@ function getRankedTeams(teams: Team[], disciplineId: DisciplineId) {
     }))
     .sort((a, b) => {
       if (a.score !== b.score) {
-        return a.score - b.score;
+        return b.score - a.score;
       }
 
       return a.team.name.localeCompare(b.team.name);
@@ -130,37 +130,35 @@ export function ScoreboardDisplayScreen({
     ...rankedTeams.map((rankedTeam) => rankedTeam.score),
   );
 
-  const visibleTeams = rankedTeams.slice(0, revealedCount);
   const disciplineName = getDisciplineName(disciplineId);
   const year = getCurrentYear();
-  const allRevealed = revealedCount >= rankedTeams.length;
+
+  const slotCount = Math.max(4, rankedTeams.length);
 
   return (
     <main className="flex h-full w-full flex-col overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 px-16 py-12 text-white">
-      <header className="flex items-start justify-between gap-8">
+      <header className="flex shrink-0 items-start justify-between gap-10">
         <div>
-          <p className="font-[family-name:var(--font-rajdhani)] text-3xl font-semibold uppercase tracking-[0.45em] text-cyan-300">
+          <p className="font-[family-name:var(--font-rajdhani)] text-[clamp(2rem,2.2vw,3rem)] font-semibold uppercase tracking-[0.45em] text-cyan-300">
             CAuDri-Challenge {year}
           </p>
 
-          <h1 className="mt-4 font-[family-name:var(--font-rajdhani)] text-7xl font-bold leading-none text-slate-50">
+          <h1 className="mt-5 font-[family-name:var(--font-rajdhani)] text-[clamp(4.5rem,5.2vw,7rem)] font-bold leading-none text-slate-50">
             {disciplineName}
           </h1>
         </div>
 
-        <div className="text-right font-[family-name:var(--font-rajdhani)]">
-          <p className="text-lg uppercase tracking-[0.3em] text-slate-500">
-            Results Reveal
-          </p>
-          <p className="mt-2 text-4xl font-bold text-cyan-100">
-            {revealedCount}/{rankedTeams.length}
-          </p>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/caudri_logo.svg"
+          alt="CAuDri-Challenge"
+          className="h-[clamp(8rem,10vw,11rem)] w-auto object-contain opacity-95"
+        />
       </header>
 
-      <section className="mt-12 flex min-h-0 flex-1 flex-col justify-end gap-4">
+      <section className="mt-12 min-h-0 flex-1">
         {rankedTeams.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center rounded-3xl border border-dashed border-slate-700 bg-slate-950/40 text-center">
+          <div className="flex h-full items-center justify-center rounded-3xl border border-dashed border-slate-700 bg-slate-950/40 text-center">
             <div>
               <p className="font-[family-name:var(--font-rajdhani)] text-5xl font-bold text-slate-300">
                 No teams for this discipline
@@ -171,121 +169,115 @@ export function ScoreboardDisplayScreen({
             </div>
           </div>
         ) : (
-          <div className="flex flex-col-reverse gap-4">
-            <AnimatePresence initial={false}>
-              {visibleTeams.map((rankedTeam, index) => {
-                const rankFromBottom = index + 1;
-                const actualRank = rankedTeams.length - index;
-                const barWidthPercent = Math.max(
-                  6,
-                  (rankedTeam.score / maxScore) * 100,
-                );
+          <div
+            className="grid h-full gap-4"
+            style={{
+              gridTemplateRows: `repeat(${slotCount}, minmax(0, 1fr))`,
+            }}
+          >
+            {Array.from({ length: slotCount }).map((_, index) => {
+              const rankedTeam = rankedTeams[index];
 
-                return (
-                  <motion.article
-                    key={rankedTeam.team.id}
-                    initial={{ opacity: 0, y: 40, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 20, scale: 0.98 }}
-                    transition={{ duration: 0.45, ease: "easeOut" }}
-                    className={`relative overflow-hidden rounded-3xl border bg-slate-950/80 p-5 shadow-2xl ${
-                      allRevealed && index === visibleTeams.length - 1
-                        ? "border-cyan-300 shadow-cyan-950/60"
-                        : "border-slate-700"
-                    }`}
-                  >
-                    <motion.div
-                      className="absolute inset-y-0 left-0 bg-cyan-400/15"
-                      initial={{ width: "0%" }}
-                      animate={{ width: `${barWidthPercent}%` }}
-                      transition={{
-                        duration: 0.9,
-                        ease: "easeOut",
-                        delay: 0.1,
-                      }}
-                    />
+              if (!rankedTeam) {
+                return <div key={`empty-slot-${index}`} />;
+              }
 
-                    <div className="relative grid grid-cols-[110px_minmax(0,1fr)_180px] items-center gap-6">
-                      <div className="flex h-24 w-24 items-center justify-center rounded-2xl border border-slate-700 bg-slate-900">
-                        {rankedTeam.team.logoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={rankedTeam.team.logoUrl}
-                            alt={`${rankedTeam.team.name} logo`}
-                            className="max-h-16 max-w-16 object-contain"
-                            style={{
-                              transform: `scale(${
-                                rankedTeam.team.logoScale ?? 1
-                              })`,
-                            }}
-                          />
-                        ) : (
-                          <span className="font-[family-name:var(--font-rajdhani)] text-4xl font-bold text-cyan-300">
-                            {getLogoFallback(rankedTeam.team.name)}
-                          </span>
-                        )}
-                      </div>
+              const revealed = index >= rankedTeams.length - revealedCount;
+              const rank = index + 1;
+              const barWidthPercent = Math.max(
+                5,
+                (rankedTeam.score / maxScore) * 100,
+              );
+              const teamColor = rankedTeam.team.teamColor ?? "#22d3ee";
 
-                      <div className="min-w-0">
-                        <p className="font-[family-name:var(--font-rajdhani)] text-lg font-bold uppercase tracking-[0.25em] text-slate-500">
-                          Rank {actualRank}
-                        </p>
-
-                        <motion.h2
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: 0.45, duration: 0.35 }}
-                          className="truncate font-[family-name:var(--font-rajdhani)] text-5xl font-bold text-slate-50"
-                        >
-                          {rankedTeam.team.name}
-                        </motion.h2>
-                      </div>
-
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.65, duration: 0.35 }}
-                        className="text-right font-mono"
+              return (
+                <div key={`slot-${rankedTeam.team.id}`} className="min-h-0">
+                  <AnimatePresence mode="wait" initial={false}>
+                    {revealed ? (
+                      <motion.article
+                        key={`revealed-${rankedTeam.team.id}`}
+                        initial={{ opacity: 0, y: 22 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 22 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                        className="grid h-full min-h-0 grid-cols-[150px_minmax(0,1fr)] items-center gap-6"
                       >
-                        <p className="text-5xl font-bold tabular-nums text-cyan-100">
-                          {rankedTeam.score}
-                        </p>
-                        <p className="mt-1 text-sm uppercase tracking-[0.25em] text-slate-500">
-                          points
-                        </p>
-                      </motion.div>
-                    </div>
-                  </motion.article>
-                );
-              })}
-            </AnimatePresence>
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.92 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.55, duration: 0.28 }}
+                          className="flex h-full items-center justify-center"
+                        >
+                          <div className="flex h-full max-h-[9rem] w-full items-center justify-center rounded-3xl border border-slate-500/40 bg-slate-200/90 shadow-xl">
+                            {rankedTeam.team.logoUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={rankedTeam.team.logoUrl}
+                                alt={`${rankedTeam.team.name} logo`}
+                                className="max-h-[78%] max-w-[78%] object-contain"
+                                style={{
+                                  transform: `scale(${rankedTeam.team.logoScale ?? 1})`,
+                                }}
+                              />
+                            ) : (
+                              <span className="font-[family-name:var(--font-rajdhani)] text-[clamp(2.2rem,2.6vw,3.2rem)] font-bold text-slate-900">
+                                {getLogoFallback(rankedTeam.team.name)}
+                              </span>
+                            )}
+                          </div>
+                        </motion.div>
+
+                        <div className="flex h-full items-center">
+                          <div className="relative h-full max-h-[9rem] w-full overflow-hidden rounded-3xl border border-slate-700 bg-slate-950/80 shadow-2xl">
+                            <motion.div
+                              className="absolute inset-y-0 left-0"
+                              style={{ backgroundColor: teamColor }}
+                              initial={{ width: "0%" }}
+                              animate={{ width: `${barWidthPercent}%` }}
+                              transition={{
+                                duration: 0.9,
+                                ease: "easeOut",
+                                delay: 0.08,
+                              }}
+                            />
+
+                            <div className="relative grid h-full grid-cols-[minmax(0,1fr)_170px] items-center gap-6 px-8">
+                              <motion.h2
+                                initial={{ opacity: 0, x: -14 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.55, duration: 0.28 }}
+                                className="truncate font-[family-name:var(--font-rajdhani)] text-[clamp(3rem,3.4vw,4.75rem)] font-bold text-slate-50 drop-shadow-lg"
+                              >
+                                {rank}. {rankedTeam.team.name}
+                              </motion.h2>
+
+                              <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.72, duration: 0.22 }}
+                                className="text-right font-mono"
+                              >
+                                <span className="text-[clamp(2.8rem,3.1vw,4.2rem)] font-bold tabular-nums text-slate-50 drop-shadow-lg">
+                                  {rankedTeam.score}
+                                </span>
+                              </motion.div>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.article>
+                    ) : (
+                      <div
+                        key={`hidden-${rankedTeam.team.id}`}
+                        className="h-full"
+                      />
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
-
-      {rankedTeams.length > 0 && revealedCount === 0 && (
-        <footer className="mt-8 text-center">
-          <p className="font-[family-name:var(--font-rajdhani)] text-3xl font-semibold uppercase tracking-[0.3em] text-slate-400">
-            Click to reveal results
-          </p>
-        </footer>
-      )}
-
-      {rankedTeams.length > 0 && revealedCount > 0 && !allRevealed && (
-        <footer className="mt-8 text-center">
-          <p className="font-[family-name:var(--font-rajdhani)] text-2xl font-semibold uppercase tracking-[0.3em] text-slate-500">
-            Click to reveal next result
-          </p>
-        </footer>
-      )}
-
-      {rankedTeams.length > 0 && allRevealed && (
-        <footer className="mt-8 text-center">
-          <p className="font-[family-name:var(--font-rajdhani)] text-4xl font-bold uppercase tracking-[0.3em] text-cyan-200">
-            Winner revealed
-          </p>
-        </footer>
-      )}
     </main>
   );
 }

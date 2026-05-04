@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import {
   type Team,
   type TeamDraft,
 } from "@/types/team";
+import { PencilLine, Pipette } from "lucide-react";
 
 type TeamFormDialogProps = {
   open: boolean;
@@ -21,6 +22,22 @@ type TeamFormDialogProps = {
   onOpenChange: (open: boolean) => void;
   onSubmit: (teamDraft: TeamDraft) => void;
 };
+
+type EyeDropperResult = {
+  sRGBHex: string;
+};
+
+type EyeDropperConstructor = new () => {
+  open: () => Promise<EyeDropperResult>;
+};
+
+type WindowWithEyeDropper = Window & {
+  EyeDropper?: EyeDropperConstructor;
+};
+
+function isValidHexColor(value: string) {
+  return /^#[0-9A-Fa-f]{6}$/.test(value);
+}
 
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -44,6 +61,7 @@ function createDefaultDraft(): TeamDraft {
   return {
     name: "",
     logoScale: 1,
+    teamColor: "#22d3ee",
     participatingDisciplines: disciplines.map((discipline) => discipline.id),
   };
 }
@@ -65,11 +83,38 @@ export function TeamFormDialog({
       logoUrl: team.logoUrl,
       logoFileName: team.logoFileName,
       logoScale: team.logoScale ?? 1,
+      teamColor: team.teamColor ?? "#22d3ee",
       participatingDisciplines: team.participatingDisciplines,
     };
   }, [team]);
 
   const [draft, setDraft] = useState<TeamDraft>(initialDraft);
+
+  const colorInputRef = useRef<HTMLInputElement | null>(null);
+
+  const eyeDropperSupported =
+    typeof window !== "undefined" &&
+    "EyeDropper" in window &&
+    typeof (window as WindowWithEyeDropper).EyeDropper === "function";
+
+  async function handlePickColorFromScreen() {
+    const EyeDropper = (window as WindowWithEyeDropper).EyeDropper;
+
+    if (!EyeDropper) {
+      return;
+    }
+
+    try {
+      const result = await new EyeDropper().open();
+
+      setDraft((currentDraft) => ({
+        ...currentDraft,
+        teamColor: result.sRGBHex,
+      }));
+    } catch {
+      // User cancelled the picker.
+    }
+  }
 
   useEffect(() => {
     if (open) {
@@ -243,6 +288,92 @@ export function TeamFormDialog({
                   </label>
                 )}
               </div>
+            </div>
+          </div>
+
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+              Team Color
+            </span>
+
+            <div className="mt-2 grid gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 md:grid-cols-[84px_minmax(0,1fr)_170px]">
+              <div className="flex flex-col items-center gap-2">
+                {/* <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-slate-500">
+                  Edit
+                </span> */}
+
+                <button
+                  type="button"
+                  onClick={() => colorInputRef.current?.click()}
+                  className="group relative flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-700 transition hover:border-cyan-400"
+                  style={{ backgroundColor: draft.teamColor ?? "#22d3ee" }}
+                  title="Open color picker"
+                >
+                  <span className="absolute right-1.5 top-1.5 rounded-md bg-slate-950/70 p-1 text-slate-100 transition group-hover:bg-slate-950">
+                    <PencilLine className="h-3.5 w-3.5" />
+                  </span>
+                </button>
+
+                <input
+                  ref={colorInputRef}
+                  type="color"
+                  value={
+                    isValidHexColor(draft.teamColor ?? "")
+                      ? draft.teamColor
+                      : "#22d3ee"
+                  }
+                  onChange={(event) =>
+                    setDraft((currentDraft) => ({
+                      ...currentDraft,
+                      teamColor: event.target.value,
+                    }))
+                  }
+                  className="sr-only"
+                  aria-label="Pick team color"
+                />
+              </div>
+
+              <div className="flex flex-col justify-center gap-2">
+                <span className="text-xs uppercase tracking-[0.25em] text-slate-500">
+                  Hex
+                </span>
+
+                <input
+                  type="text"
+                  value={draft.teamColor ?? "#22d3ee"}
+                  onChange={(event) =>
+                    setDraft((currentDraft) => ({
+                      ...currentDraft,
+                      teamColor: event.target.value,
+                    }))
+                  }
+                  onBlur={() =>
+                    setDraft((currentDraft) => ({
+                      ...currentDraft,
+                      teamColor: isValidHexColor(currentDraft.teamColor ?? "")
+                        ? currentDraft.teamColor
+                        : "#22d3ee",
+                    }))
+                  }
+                  className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100 outline-none transition focus:border-cyan-400"
+                  placeholder="#22d3ee"
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={!eyeDropperSupported}
+                onClick={handlePickColorFromScreen}
+                className="flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-950 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-cyan-400 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-30"
+                title={
+                  eyeDropperSupported
+                    ? "Pick a color from the screen"
+                    : "EyeDropper is not supported in this browser/context"
+                }
+              >
+                <Pipette className="h-4 w-4" />
+                <span>Pick Color</span>
+              </button>
             </div>
           </div>
 

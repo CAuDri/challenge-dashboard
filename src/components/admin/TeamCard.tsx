@@ -101,6 +101,11 @@ export function TeamCard({
             {participatingDisciplines.length === 1 ? "" : "s"}
           </p>
         </div>
+
+        <div
+          className="absolute inset-x-0 top-0 h-1"
+          style={{ backgroundColor: team.teamColor ?? "#22d3ee" }}
+        />
       </header>
 
       <div className="mt-5 grid gap-3">
