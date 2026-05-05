@@ -14,7 +14,7 @@
       {
         "name": "$(debug-stop) Stop Dashboard",
         "color": "#aa0202",
-        "command": "pkill -f 'server.ts' || true"
+        "command": "pkill -f 'pnpm dev'"
       }
     ]
   }

@@ -11,6 +11,7 @@ services:
       - pnpm_store:/root/.local/share/pnpm/store
     ports:
       - "3000:3000"
+      - "3001:3001"
     environment:
       NODE_ENV: development
       NEXT_TELEMETRY_DISABLED: "1"

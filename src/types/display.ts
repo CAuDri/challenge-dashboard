@@ -9,4 +9,5 @@ export type DisplayState = {
   teams: Team[];
   currentRun: CurrentRunState;
   timer: CountdownTimerState;
+  autoEndRunWhenTimerFinished: boolean;
 };

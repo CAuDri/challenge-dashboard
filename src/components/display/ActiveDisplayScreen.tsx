@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { DisplayScreenRenderer } from "@/components/display/DisplayScreenRenderer";
 import { useDisplayStateSocket } from "@/hooks/useDisplayStateSocket";
+import { useServerCountdownTimer } from "@/hooks/useServerCountdownTimer";
 
 function getActiveScreen(
   activeScreenId: string,
@@ -15,7 +17,24 @@ function getActiveScreen(
 }
 
 export function ActiveDisplayScreen() {
-  const { displayState } = useDisplayStateSocket();
+  const { displayState, estimatedOneWayLatencyMs } = useDisplayStateSocket();
+
+  const noopTimerCommands = useMemo(
+    () => ({
+      setDurationMs() {},
+      start() {},
+      pause() {},
+      reset() {},
+      finish() {},
+    }),
+    [],
+  );
+
+  const derivedTimer = useServerCountdownTimer(
+    displayState.timer,
+    noopTimerCommands,
+    estimatedOneWayLatencyMs,
+  );
 
   const activeScreen = getActiveScreen(
     displayState.activeScreenId,
@@ -37,7 +56,7 @@ export function ActiveDisplayScreen() {
       screen={activeScreen}
       teams={displayState.teams}
       currentRun={displayState.currentRun}
-      timer={displayState.timer}
+      timer={derivedTimer.timer}
     />
   );
 }

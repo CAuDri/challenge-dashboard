@@ -9,7 +9,7 @@ import {
 } from "react";
 import { demoScreens } from "@/config/demoScreens";
 import { useDisplayStateSocket } from "@/hooks/useDisplayStateSocket";
-import { useCountdownTimer } from "@/hooks/useCountdownTimer";
+import { useServerCountdownTimer } from "@/hooks/useServerCountdownTimer";
 import type { ScreenDefinition, ScreenDraft } from "@/types/screen";
 import {
   disciplines,
@@ -23,7 +23,7 @@ import {
   type RunPhase,
 } from "@/types/run";
 
-type CountdownTimerController = ReturnType<typeof useCountdownTimer>;
+type CountdownTimerController = ReturnType<typeof useServerCountdownTimer>;
 
 type AdminStateContextValue = {
   timer: CountdownTimerController;
@@ -85,7 +85,18 @@ const initialTeams: Team[] = [
 ];
 
 export function AdminStateProvider({ children }: AdminStateProviderProps) {
-  const timer = useCountdownTimer();
+  const {
+    displayState,
+    publishDisplayState,
+    timerCommands,
+    estimatedOneWayLatencyMs,
+  } = useDisplayStateSocket();
+
+  const timer = useServerCountdownTimer(
+    displayState.timer,
+    timerCommands,
+    estimatedOneWayLatencyMs,
+  );
 
   const [teams, setTeams] = useState<Team[]>(initialTeams);
 
@@ -103,22 +114,20 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
   const [autoEndRunWhenTimerFinished, setAutoEndRunWhenTimerFinished] =
     useState(true);
 
-  const { publishDisplayState } = useDisplayStateSocket();
-
   useEffect(() => {
     publishDisplayState({
       activeScreenId,
       screens,
       teams,
       currentRun,
-      timer: timer.timer,
+      autoEndRunWhenTimerFinished,
     });
   }, [
     activeScreenId,
     screens,
     teams,
     currentRun,
-    timer.timer,
+    autoEndRunWhenTimerFinished,
     publishDisplayState,
   ]);
 
@@ -338,7 +347,7 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
   }
 
   function endCurrentRun() {
-    timer.pauseTimer();
+    timer.finishTimer();
 
     setCurrentRun((currentRunState) => ({
       ...currentRunState,

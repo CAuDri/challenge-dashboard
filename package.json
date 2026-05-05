@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "tsx src/server/server.ts",
+    "dev": "concurrently -k \"pnpm dev:web\" \"pnpm dev:realtime\"",
+    "dev:web": "next dev --hostname 0.0.0.0 --port 3000",
+    "dev:realtime": "tsx src/realtime/realtime-server.ts",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "concurrently -k \"pnpm start:web\" \"pnpm start:realtime\"",
+    "start:web": "next start --hostname 0.0.0.0 --port 3000",
+    "start:realtime": "NODE_ENV=production tsx src/realtime/realtime-server.ts"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
@@ -28,6 +31,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",

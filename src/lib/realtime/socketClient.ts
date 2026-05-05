@@ -6,7 +6,7 @@ let socket: Socket | undefined;
 
 export function getSocketClient() {
   if (!socket) {
-    socket = io({
+    socket = io(process.env.NEXT_PUBLIC_REALTIME_URL, {
       path: "/socket.io",
       transports: ["websocket", "polling"],
     });
