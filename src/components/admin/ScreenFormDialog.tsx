@@ -12,6 +12,7 @@ import {
   type ScreenDefinition,
   type ScreenDraft,
   type ScreenType,
+  type TimerScreenConfig,
 } from "@/types/screen";
 
 type ScreenFormDialogProps = {
@@ -31,6 +32,24 @@ function createDefaultDraft(): ScreenDraft {
     config: {
       image: {},
     },
+  };
+}
+
+function createDefaultTimerConfig(): TimerScreenConfig {
+  return {
+    layout: "run_info",
+    showHeader: true,
+    showLogo: true,
+    showTeam: true,
+    showDiscipline: true,
+    showPhase: true,
+    showCustomTitle: false,
+    customTitle: "",
+    showInfoText: false,
+    infoText: "",
+    useTeamColorAccent: true,
+    timerScale: 1,
+    showMilliseconds: "during_running",
   };
 }
 
@@ -109,7 +128,12 @@ export function ScreenFormDialog({
               ...currentDraft.config,
               image: currentDraft.config?.image ?? {},
             }
-          : currentDraft.config,
+          : type === "timer"
+            ? {
+                ...currentDraft.config,
+                timer: currentDraft.config?.timer ?? createDefaultTimerConfig(),
+              }
+            : currentDraft.config,
     }));
   }
 
@@ -312,6 +336,236 @@ export function ScreenFormDialog({
                     </span>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {draft.type === "timer" && (
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                Timer Screen Configuration
+              </span>
+
+              <div className="mt-2 grid gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                    <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                      Layout
+                    </span>
+
+                    <select
+                      value={draft.config?.timer?.layout ?? "run_info"}
+                      onChange={(event) =>
+                        setDraft((currentDraft) => ({
+                          ...currentDraft,
+                          config: {
+                            ...currentDraft.config,
+                            timer: {
+                              ...(currentDraft.config?.timer ??
+                                createDefaultTimerConfig()),
+                              layout: event.target.value as
+                                | "timer_only"
+                                | "run_info",
+                            },
+                          },
+                        }))
+                      }
+                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100 outline-none transition focus:border-cyan-400"
+                    >
+                      <option value="timer_only">Timer only</option>
+                      <option value="run_info">Run info</option>
+                    </select>
+                  </label>
+
+                  <label className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={draft.config?.timer?.useTeamColorAccent ?? true}
+                      onChange={(event) =>
+                        setDraft((currentDraft) => ({
+                          ...currentDraft,
+                          config: {
+                            ...currentDraft.config,
+                            timer: {
+                              ...(currentDraft.config?.timer ??
+                                createDefaultTimerConfig()),
+                              useTeamColorAccent: event.target.checked,
+                            },
+                          },
+                        }))
+                      }
+                      className="h-4 w-4 accent-cyan-400"
+                    />
+                    <span>Use team color accent</span>
+                  </label>
+                </div>
+
+                <label className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                      Timer Size
+                    </span>
+
+                    <span className="font-mono text-sm text-slate-300">
+                      {Math.round((draft.config?.timer?.timerScale ?? 1) * 100)}
+                      %
+                    </span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={0.7}
+                    max={1.25}
+                    step={0.05}
+                    value={draft.config?.timer?.timerScale ?? 1}
+                    onChange={(event) =>
+                      setDraft((currentDraft) => ({
+                        ...currentDraft,
+                        config: {
+                          ...currentDraft.config,
+                          timer: {
+                            ...(currentDraft.config?.timer ??
+                              createDefaultTimerConfig()),
+                            timerScale: Number(event.target.value),
+                          },
+                        },
+                      }))
+                    }
+                    className="mt-3 w-full accent-cyan-400"
+                  />
+                </label>
+
+                <label className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                  <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                    Show Milliseconds
+                  </span>
+
+                  <select
+                    value={draft.config?.timer?.showMilliseconds ?? "always"}
+                    onChange={(event) =>
+                      setDraft((currentDraft) => ({
+                        ...currentDraft,
+                        config: {
+                          ...currentDraft.config,
+                          timer: {
+                            ...(currentDraft.config?.timer ??
+                              createDefaultTimerConfig()),
+                            showMilliseconds: event.target.value as
+                              | "always"
+                              | "during_running"
+                              | "never",
+                          },
+                        },
+                      }))
+                    }
+                    className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100 outline-none transition focus:border-cyan-400"
+                  >
+                    <option value="always">Always</option>
+                    <option value="during_running">During Running Phase</option>
+                    <option value="never">Never</option>
+                  </select>
+                </label>
+
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {[
+                    ["showHeader", "Header"],
+                    ["showLogo", "CAuDri Logo"],
+                    ["showTeam", "Team"],
+                    ["showDiscipline", "Discipline"],
+                    ["showPhase", "Phase"],
+                    ["showCustomTitle", "Custom Title"],
+                    ["showInfoText", "Info Text"],
+                  ].map(([key, label]) => (
+                    <label
+                      key={key}
+                      className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-300"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={
+                          Boolean(
+                            draft.config?.timer?.[
+                              key as keyof NonNullable<
+                                typeof draft.config
+                              >["timer"]
+                            ],
+                          ) ?? false
+                        }
+                        onChange={(event) =>
+                          setDraft((currentDraft) => ({
+                            ...currentDraft,
+                            config: {
+                              ...currentDraft.config,
+                              timer: {
+                                ...(currentDraft.config?.timer ??
+                                  createDefaultTimerConfig()),
+                                [key]: event.target.checked,
+                              },
+                            },
+                          }))
+                        }
+                        className="h-4 w-4 accent-cyan-400"
+                      />
+
+                      <span>{label}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {(draft.config?.timer?.showCustomTitle ?? false) && (
+                  <label className="block">
+                    <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                      Custom Title
+                    </span>
+
+                    <input
+                      type="text"
+                      value={draft.config?.timer?.customTitle ?? ""}
+                      onChange={(event) =>
+                        setDraft((currentDraft) => ({
+                          ...currentDraft,
+                          config: {
+                            ...currentDraft.config,
+                            timer: {
+                              ...(currentDraft.config?.timer ??
+                                createDefaultTimerConfig()),
+                              customTitle: event.target.value,
+                            },
+                          },
+                        }))
+                      }
+                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-lg font-semibold text-slate-50 outline-none transition focus:border-cyan-400"
+                      placeholder="Custom title"
+                    />
+                  </label>
+                )}
+
+                {(draft.config?.timer?.showInfoText ?? false) && (
+                  <label className="block">
+                    <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                      Info Text
+                    </span>
+
+                    <textarea
+                      value={draft.config?.timer?.infoText ?? ""}
+                      onChange={(event) =>
+                        setDraft((currentDraft) => ({
+                          ...currentDraft,
+                          config: {
+                            ...currentDraft.config,
+                            timer: {
+                              ...(currentDraft.config?.timer ??
+                                createDefaultTimerConfig()),
+                              infoText: event.target.value,
+                            },
+                          },
+                        }))
+                      }
+                      className="mt-2 min-h-20 w-full resize-none rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm leading-6 text-slate-50 outline-none transition focus:border-cyan-400"
+                      placeholder="Optional information shown below the timer"
+                    />
+                  </label>
+                )}
               </div>
             </div>
           )}

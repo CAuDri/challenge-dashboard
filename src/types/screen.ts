@@ -2,6 +2,8 @@ import type { DisciplineId } from "@/types/team";
 
 export type ScreenType = "image" | "pdf" | "camera" | "timer" | "scoreboard";
 
+export type TimerMillisecondsMode = "always" | "during_running" | "never";
+
 export type ImageScreenConfig = {
   imageUrl?: string;
   imageFileName?: string;
@@ -45,6 +47,23 @@ export type TimerScreenLayout = "timer_only" | "run_info";
 
 export type TimerScreenConfig = {
   layout: TimerScreenLayout;
+
+  showHeader: boolean;
+  showLogo: boolean;
+  showTeam: boolean;
+  showDiscipline: boolean;
+  showPhase: boolean;
+
+  showCustomTitle: boolean;
+  customTitle?: string;
+
+  showInfoText: boolean;
+  infoText?: string;
+
+  useTeamColorAccent: boolean;
+
+  timerScale: number;
+  showMilliseconds: TimerMillisecondsMode;
 };
 
 export const screenTypes: ScreenTypeDefinition[] = [
