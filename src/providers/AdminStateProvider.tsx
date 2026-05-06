@@ -1,7 +1,10 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
-import { useDisplayStateSocket } from "@/hooks/useDisplayStateSocket";
+import {
+  useDisplayStateSocket,
+  type RealtimeConnectionStatus,
+} from "@/hooks/useDisplayStateSocket";
 import { useServerCountdownTimer } from "@/hooks/useServerCountdownTimer";
 import {
   disciplines,
@@ -16,6 +19,9 @@ import type { CurrentRunState, RunPhase } from "@/types/run";
 type CountdownTimerController = ReturnType<typeof useServerCountdownTimer>;
 
 type AdminStateContextValue = {
+  connectionStatus: RealtimeConnectionStatus;
+  estimatedOneWayLatencyMs: number;
+
   timer: CountdownTimerController;
 
   teams: Team[];
@@ -74,6 +80,7 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
     setActiveScreen,
     timerCommands,
     estimatedOneWayLatencyMs,
+    connectionStatus,
   } = useDisplayStateSocket();
 
   const timer = useServerCountdownTimer(
@@ -327,6 +334,9 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
   return (
     <AdminStateContext.Provider
       value={{
+        connectionStatus,
+        estimatedOneWayLatencyMs,
+
         timer,
 
         teams,

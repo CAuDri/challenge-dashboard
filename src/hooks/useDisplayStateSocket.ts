@@ -15,6 +15,11 @@ type AdminDisplayStatePayload = Pick<
   | "autoEndRunWhenTimerFinished"
 >;
 
+export type RealtimeConnectionStatus =
+  | "connected"
+  | "reconnecting"
+  | "disconnected";
+
 const initialDisplayState: DisplayState = {
   activeScreenId: "fallback",
   screens: demoScreens,
@@ -43,11 +48,41 @@ export function useDisplayStateSocket() {
   const [displayState, setDisplayState] =
     useState<DisplayState>(initialDisplayState);
 
+  const [connectionStatus, setConnectionStatus] =
+    useState<RealtimeConnectionStatus>("reconnecting");
+
   const [estimatedOneWayLatencyMs, setEstimatedOneWayLatencyMs] = useState(0);
   const latencyInitializedRef = useRef(false);
 
   useEffect(() => {
     const socket = getSocketClient();
+    let isMounted = true;
+
+    queueMicrotask(() => {
+      if (isMounted) {
+        setConnectionStatus(socket.connected ? "connected" : "reconnecting");
+      }
+    });
+
+    function handleConnect() {
+      setConnectionStatus("connected");
+    }
+
+    function handleDisconnect() {
+      setConnectionStatus("reconnecting");
+    }
+
+    function handleConnectError() {
+      setConnectionStatus("disconnected");
+    }
+
+    function handleReconnectAttempt() {
+      setConnectionStatus("reconnecting");
+    }
+
+    function handleReconnectFailed() {
+      setConnectionStatus("disconnected");
+    }
 
     function handleDisplayState(state: DisplayState) {
       setDisplayState(state);
@@ -79,6 +114,11 @@ export function useDisplayStateSocket() {
       });
     }
 
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleConnectError);
+    socket.io.on("reconnect_attempt", handleReconnectAttempt);
+    socket.io.on("reconnect_failed", handleReconnectFailed);
     socket.on("display:state", handleDisplayState);
     socket.on("time:sync-response", handleTimeSyncResponse);
 
@@ -94,7 +134,13 @@ export function useDisplayStateSocket() {
     const intervalId = window.setInterval(requestTimeSync, 2_000);
 
     return () => {
+      isMounted = false;
       window.clearInterval(intervalId);
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
+      socket.io.off("reconnect_attempt", handleReconnectAttempt);
+      socket.io.off("reconnect_failed", handleReconnectFailed);
       socket.off("display:state", handleDisplayState);
       socket.off("time:sync-response", handleTimeSyncResponse);
     };
@@ -174,6 +220,7 @@ export function useDisplayStateSocket() {
 
   return {
     displayState,
+    connectionStatus,
     publishDisplayState,
     updateDashboardState,
     setActiveScreen,

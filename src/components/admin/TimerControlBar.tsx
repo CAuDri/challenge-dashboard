@@ -87,7 +87,7 @@ function DigitStepper({
 }
 
 export function TimerControlBar() {
-  const { timer: countdownTimer } = useAdminState();
+  const { timer: countdownTimer, estimatedOneWayLatencyMs } = useAdminState();
 
   const {
     timer,
@@ -231,22 +231,28 @@ export function TimerControlBar() {
               </div>
             </div>
 
-            <div className="flex min-w-0 items-baseline justify-center font-mono tabular-nums">
-              <span className="inline-block w-[2ch] text-right text-7xl font-bold leading-none tracking-[-0.08em] text-cyan-100 2xl:text-8xl">
-                {displayedTime.minutes.toString().padStart(2, "0")}
-              </span>
+            <div className="flex min-w-0 flex-col items-center justify-center gap-2">
+              <div className="flex items-baseline justify-center font-mono tabular-nums">
+                <span className="inline-block w-[2ch] text-right text-7xl font-bold leading-none tracking-[-0.08em] text-cyan-100 2xl:text-8xl">
+                  {displayedTime.minutes.toString().padStart(2, "0")}
+                </span>
 
-              <span className="inline-block w-[0.7ch] text-center text-7xl font-bold leading-none tracking-[-0.08em] text-cyan-300/70 2xl:text-8xl">
-                :
-              </span>
+                <span className="inline-block w-[0.7ch] text-center text-7xl font-bold leading-none tracking-[-0.08em] text-cyan-300/70 2xl:text-8xl">
+                  :
+                </span>
 
-              <span className="inline-block w-[2ch] text-left text-7xl font-bold leading-none tracking-[-0.08em] text-cyan-100 2xl:text-8xl">
-                {displayedTime.seconds.toString().padStart(2, "0")}
-              </span>
+                <span className="inline-block w-[2ch] text-left text-7xl font-bold leading-none tracking-[-0.08em] text-cyan-100 2xl:text-8xl">
+                  {displayedTime.seconds.toString().padStart(2, "0")}
+                </span>
 
-              <span className="inline-block w-[4ch] text-left text-4xl font-semibold tracking-[-0.08em] text-cyan-200/75 2xl:text-5xl">
-                .{displayedTime.milliseconds.toString().padStart(3, "0")}
-              </span>
+                <span className="inline-block w-[4ch] text-left text-4xl font-semibold tracking-[-0.08em] text-cyan-200/75 2xl:text-5xl">
+                  .{displayedTime.milliseconds.toString().padStart(3, "0")}
+                </span>
+              </div>
+
+              <p className="font-[family-name:var(--font-rajdhani)] text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100/35">
+                Latency ~{Math.round(estimatedOneWayLatencyMs)}ms
+              </p>
             </div>
           </div>
         </div>
