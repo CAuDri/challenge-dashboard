@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -89,6 +89,7 @@ export function ScreenFormDialog({
   }, [screen]);
 
   const [draft, setDraft] = useState<ScreenDraft>(initialDraft);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -108,7 +109,6 @@ export function ScreenFormDialog({
 
   const canSubmit =
     draft.name.trim().length > 0 &&
-    draft.description.trim().length > 0 &&
     draft.thumbnailLabel.trim().length > 0;
 
   function handleTypeChange(type: ScreenType) {
@@ -217,7 +217,7 @@ export function ScreenFormDialog({
 
           <label className="block">
             <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-              Description
+              Description (Optional)
             </span>
             <textarea
               value={draft.description}
@@ -228,7 +228,7 @@ export function ScreenFormDialog({
                 }))
               }
               className="mt-2 min-h-24 w-full resize-none rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm leading-6 text-slate-50 outline-none transition focus:border-cyan-400"
-              placeholder="Describe what this screen is used for"
+              placeholder="Optional note for the admin overview"
             />
           </label>
 
@@ -281,12 +281,22 @@ export function ScreenFormDialog({
               <div className="mt-2 grid gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-4 md:grid-cols-[minmax(0,1fr)_220px]">
                 <div className="flex flex-col justify-center gap-3">
                   <input
+                    ref={imageInputRef}
                     type="file"
                     accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                    className="hidden"
                     onChange={(event) => {
                       void handleImageFileChange(event.target.files?.[0]);
                     }}
                   />
+
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    className="w-fit rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300 hover:bg-cyan-400/20"
+                  >
+                    Choose Image
+                  </button>
 
                   {draft.config?.image?.imageFileName && (
                     <p className="text-sm text-slate-400">
@@ -324,7 +334,12 @@ export function ScreenFormDialog({
                   </p>
                 </div>
 
-                <div className="flex aspect-video items-center justify-center overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  className="flex aspect-video items-center justify-center overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 transition hover:border-cyan-400/50 hover:bg-slate-900"
+                  aria-label="Choose image file"
+                >
                   {draft.config?.image?.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -334,10 +349,10 @@ export function ScreenFormDialog({
                     />
                   ) : (
                     <span className="text-center text-xs uppercase tracking-[0.2em] text-slate-600">
-                      No Image
+                      Click to choose image
                     </span>
                   )}
-                </div>
+                </button>
               </div>
             </div>
           )}

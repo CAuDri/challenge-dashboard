@@ -64,6 +64,9 @@ export function ScreenSelectionPanel() {
   const {
     screens,
     activeScreenId,
+    teams,
+    currentRun,
+    timer,
     addScreen,
     updateScreen,
     deleteScreen,
@@ -112,7 +115,7 @@ export function ScreenSelectionPanel() {
         <div>
           <h2 className="text-xl font-bold">Screens</h2>
           <p className="mt-1 text-sm text-slate-400">
-            Create display screens and double-click a card to activate it.
+            Create display screens and manage what appears on the display.
           </p>
         </div>
 
@@ -153,6 +156,9 @@ export function ScreenSelectionPanel() {
                     screen={screen}
                     active={screen.id === activeScreenId}
                     builtIn={builtInScreenIds.has(screen.id)}
+                    teams={teams}
+                    currentRun={currentRun}
+                    timer={timer.timer}
                     onActivate={activateScreen}
                     onEdit={handleEditScreen}
                     onDelete={deleteScreen}

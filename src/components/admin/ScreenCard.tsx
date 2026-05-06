@@ -8,13 +8,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ScreenThumbnail } from "@/components/admin/ScreenThumbnail";
+import type { CurrentRunState } from "@/types/run";
 import type { ScreenDefinition } from "@/types/screen";
+import type { Team } from "@/types/team";
+import type { CountdownTimerState } from "@/types/timer";
 import { Eye, PencilLine, Trash2 } from "lucide-react";
 
 type ScreenCardProps = {
   screen: ScreenDefinition;
   active: boolean;
   builtIn: boolean;
+  teams: Team[];
+  currentRun: CurrentRunState;
+  timer: CountdownTimerState;
   onActivate: (screenId: string) => void;
   onEdit: (screen: ScreenDefinition) => void;
   onDelete: (screenId: string) => void;
@@ -24,6 +31,9 @@ export function ScreenCard({
   screen,
   active,
   builtIn,
+  teams,
+  currentRun,
+  timer,
   onActivate,
   onEdit,
   onDelete,
@@ -104,21 +114,12 @@ export function ScreenCard({
       </div>
 
       <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-gradient-to-br from-slate-800 to-slate-950">
-        {screen.type === "image" && screen.config?.image?.imageUrl ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={screen.config.image.imageUrl}
-              alt=""
-              className="h-full w-full object-contain"
-            />
-            <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/95 to-transparent" />
-          </>
-        ) : (
-          <span className="rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-5 py-3 font-[family-name:var(--font-rajdhani)] text-2xl font-bold uppercase tracking-wide text-cyan-200">
-            {screen.thumbnailLabel}
-          </span>
-        )}
+        <ScreenThumbnail
+          screen={screen}
+          teams={teams}
+          currentRun={currentRun}
+          timer={timer}
+        />
 
         <span className="absolute left-4 top-4 rounded-full border border-slate-700 bg-slate-950/85 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
           {screen.type}
@@ -154,11 +155,11 @@ export function ScreenCard({
           )}
         </div>
 
-        <p className="text-sm leading-6 text-slate-400">{screen.description}</p>
-
-        <p className="text-xs uppercase tracking-[0.25em] text-slate-600">
-          Double-click to activate
-        </p>
+        {screen.description.trim().length > 0 && (
+          <p className="text-sm leading-6 text-slate-400">
+            {screen.description}
+          </p>
+        )}
       </div>
     </article>
   );
