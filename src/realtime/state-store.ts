@@ -1,9 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import type { DisplayState } from "../types/display";
-import type { CurrentRunState } from "../types/run";
-import type { ScreenDefinition } from "../types/screen";
-import type { Team } from "../types/team";
 import type { PersistedDashboardState } from "@/types/persistence";
 
 const stateFilePath = resolve(

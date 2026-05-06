@@ -24,6 +24,7 @@
 .DS_Store
 *.pem
 .pnpm-store
+/.data/
 
 # debug
 npm-debug.log*

@@ -144,7 +144,7 @@ function TimerHeader({
 }) {
   const disciplineName = getDisciplineName(currentRun);
   const hasCustomTitle =
-    config.showCustomTitle && config.customTitle?.trim().length > 0;
+    config.showCustomTitle && (config.customTitle?.trim().length ?? 0) > 0;
 
   const showMainTitle = hasCustomTitle || config.showDiscipline;
   const mainTitle = hasCustomTitle ? config.customTitle : disciplineName;

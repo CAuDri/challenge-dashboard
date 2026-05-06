@@ -3,7 +3,6 @@ import next from "next";
 import { Server as SocketIOServer } from "socket.io";
 import { demoScreens } from "../config/demoScreens";
 import type { DisplayState } from "../types/display";
-import type { Team } from "../types/team";
 import { performance } from "node:perf_hooks";
 
 const dev = process.env.NODE_ENV !== "production";
@@ -36,24 +35,6 @@ const displayState: DisplayState = {
   },
   autoEndRunWhenTimerFinished: false,
 };
-
-function isValidDisplayState(payload: unknown): payload is DisplayState {
-  if (typeof payload !== "object" || payload === null) {
-    return false;
-  }
-
-  const candidate = payload as Partial<DisplayState>;
-
-  return (
-    typeof candidate.activeScreenId === "string" &&
-    Array.isArray(candidate.screens) &&
-    Array.isArray(candidate.teams) &&
-    typeof candidate.currentRun === "object" &&
-    candidate.currentRun !== null &&
-    typeof candidate.timer === "object" &&
-    candidate.timer !== null
-  );
-}
 
 function getTimerSnapshot() {
   const now = performance.now();
