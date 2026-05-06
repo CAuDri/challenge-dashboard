@@ -11,11 +11,23 @@ import {
   type ScreenType,
 } from "@/types/screen";
 import { demoScreens } from "@/config/demoScreens";
+import { Plus } from "lucide-react";
 
 const builtInScreenIds = new Set(demoScreens.map((screen) => screen.id));
+const screenSectionOrder: ScreenType[] = [
+  "image",
+  "timer",
+  "scoreboard",
+  "pdf",
+  "camera",
+];
 
 function groupScreensByType(screens: ScreenDefinition[]) {
-  return screenTypes
+  return screenSectionOrder
+    .map((screenTypeId) =>
+      screenTypes.find((screenType) => screenType.id === screenTypeId),
+    )
+    .filter((screenType) => screenType !== undefined)
     .map((screenType) => ({
       ...screenType,
       screens: screens.filter((screen) => screen.type === screenType.id),
@@ -107,8 +119,9 @@ export function ScreenSelectionPanel() {
         <button
           type="button"
           onClick={handleAddScreenClick}
-          className="rounded-xl bg-cyan-400 px-4 py-2 font-semibold text-slate-950 transition hover:bg-cyan-300"
+          className="inline-flex items-center gap-2 rounded-xl bg-cyan-400 px-4 py-2 font-semibold text-slate-950 transition hover:bg-cyan-300"
         >
+          <Plus className="size-4" />
           Add Screen
         </button>
       </header>
