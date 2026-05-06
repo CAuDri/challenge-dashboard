@@ -4,13 +4,17 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { ScreenDefinition } from "@/types/screen";
+import { Eye, PencilLine, Trash2 } from "lucide-react";
 
 type ScreenCardProps = {
   screen: ScreenDefinition;
   active: boolean;
+  builtIn: boolean;
   onActivate: (screenId: string) => void;
   onEdit: (screen: ScreenDefinition) => void;
   onDelete: (screenId: string) => void;
@@ -19,6 +23,7 @@ type ScreenCardProps = {
 export function ScreenCard({
   screen,
   active,
+  builtIn,
   onActivate,
   onEdit,
   onDelete,
@@ -61,36 +66,62 @@ export function ScreenCard({
 
           <DropdownMenuContent
             align="end"
-            className="border-slate-800 bg-slate-950 text-slate-100"
+            className="w-52 border-slate-800 bg-slate-950 p-2 text-slate-100"
           >
+            <DropdownMenuLabel className="font-[family-name:var(--font-rajdhani)] text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
+              Screen Actions
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-slate-800" />
+
             <DropdownMenuItem
               onClick={() => onActivate(screen.id)}
-              className="cursor-pointer focus:bg-slate-800 focus:text-cyan-100"
+              className="cursor-pointer gap-2 focus:bg-slate-800 focus:text-cyan-100"
             >
+              <Eye className="size-4 text-cyan-300" />
               Activate Screen
             </DropdownMenuItem>
 
             <DropdownMenuItem
               onClick={() => onEdit(screen)}
-              className="cursor-pointer focus:bg-slate-800 focus:text-cyan-100"
+              className="cursor-pointer gap-2 focus:bg-slate-800 focus:text-cyan-100"
             >
+              <PencilLine className="size-4 text-cyan-300" />
               Edit Screen
             </DropdownMenuItem>
+
+            <DropdownMenuSeparator className="bg-slate-800" />
 
             <DropdownMenuItem
               onClick={handleDelete}
               disabled={screen.id === "fallback"}
-              className="cursor-pointer text-rose-300 focus:bg-rose-950 focus:text-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="cursor-pointer gap-2 text-rose-300 focus:bg-rose-950 focus:text-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Delete Screen
+              <Trash2 className="size-4" />
+              {screen.id === "fallback" ? "Fallback Locked" : "Delete Screen"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      <div className="flex aspect-video items-center justify-center bg-gradient-to-br from-slate-800 to-slate-950">
-        <span className="rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-5 py-3 font-[family-name:var(--font-rajdhani)] text-2xl font-bold uppercase tracking-wide text-cyan-200">
-          {screen.thumbnailLabel}
+      <div className="relative flex aspect-video items-center justify-center overflow-hidden bg-gradient-to-br from-slate-800 to-slate-950">
+        {screen.type === "image" && screen.config?.image?.imageUrl ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={screen.config.image.imageUrl}
+              alt=""
+              className="h-full w-full object-contain"
+            />
+            <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/95 to-transparent" />
+          </>
+        ) : (
+          <span className="rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-5 py-3 font-[family-name:var(--font-rajdhani)] text-2xl font-bold uppercase tracking-wide text-cyan-200">
+            {screen.thumbnailLabel}
+          </span>
+        )}
+
+        <span className="absolute left-4 top-4 rounded-full border border-slate-700 bg-slate-950/85 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+          {screen.type}
         </span>
       </div>
 
@@ -101,9 +132,19 @@ export function ScreenCard({
               {screen.name}
             </h3>
 
-            <p className="mt-1 text-sm uppercase tracking-[0.2em] text-slate-500">
-              {screen.type}
-            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {builtIn && (
+                <span className="rounded-full border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  Built-in
+                </span>
+              )}
+
+              {screen.id === "fallback" && (
+                <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">
+                  Fallback
+                </span>
+              )}
+            </div>
           </div>
 
           {active && (

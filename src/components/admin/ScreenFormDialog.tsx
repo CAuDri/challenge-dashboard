@@ -91,9 +91,19 @@ export function ScreenFormDialog({
   const [draft, setDraft] = useState<ScreenDraft>(initialDraft);
 
   useEffect(() => {
+    let isMounted = true;
+
     if (open) {
-      setDraft(initialDraft);
+      queueMicrotask(() => {
+        if (isMounted) {
+          setDraft(initialDraft);
+        }
+      });
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [initialDraft, open]);
 
   const canSubmit =
@@ -309,8 +319,8 @@ export function ScreenFormDialog({
                   )}
 
                   <p className="text-xs leading-5 text-slate-500">
-                    The image is currently stored in browser state as a Data
-                    URL. Later this will be replaced by persistent file uploads.
+                    Uploaded images are stored by the realtime server and
+                    included in dashboard backups when referenced by a screen.
                   </p>
                 </div>
 
@@ -433,7 +443,9 @@ export function ScreenFormDialog({
                   </span>
 
                   <select
-                    value={draft.config?.timer?.showMilliseconds ?? "always"}
+                    value={
+                      draft.config?.timer?.showMilliseconds ?? "during_running"
+                    }
                     onChange={(event) =>
                       setDraft((currentDraft) => ({
                         ...currentDraft,
