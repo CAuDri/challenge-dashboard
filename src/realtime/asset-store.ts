@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { extname, join, resolve } from "node:path";
+import { extname, resolve } from "node:path";
 
 export type SavedAsset = {
   fileName: string;
@@ -21,7 +21,7 @@ const allowedMimeTypes = new Map<string, string>([
   ["image/webp", ".webp"],
 ]);
 
-function sanitizeFileName(fileName: string) {
+function sanitizeOriginalFileName(fileName: string) {
   return fileName
     .trim()
     .toLowerCase()
@@ -29,6 +29,25 @@ function sanitizeFileName(fileName: string) {
     .replace(/[^a-z0-9._-]/g, "")
     .replace(/^-+/, "")
     .slice(0, 80);
+}
+
+function getAssetPath(fileName: string) {
+  const safeFileName = fileName.trim();
+
+  if (!safeFileName || !/^[a-z0-9._-]+$/.test(safeFileName)) {
+    throw new Error("Invalid asset file name");
+  }
+
+  const absolutePath = resolve(assetDirectory, safeFileName);
+
+  if (!absolutePath.startsWith(`${assetDirectory}/`)) {
+    throw new Error("Invalid asset path");
+  }
+
+  return {
+    fileName: safeFileName,
+    absolutePath,
+  };
 }
 
 function getExtension(fileName: string, mimeType: string) {
@@ -85,12 +104,12 @@ export async function saveDataUrlAsset({
   }
 
   const extension = getExtension(fileName, mimeType);
-  const sanitizedOriginalName = sanitizeFileName(
+  const sanitizedOriginalName = sanitizeOriginalFileName(
     fileName.replace(/\.[^.]+$/, ""),
   );
   const assetId = crypto.randomUUID();
   const storedFileName = `${prefix}-${Date.now()}-${assetId}-${sanitizedOriginalName}${extension}`;
-  const absolutePath = join(assetDirectory, storedFileName);
+  const { absolutePath } = getAssetPath(storedFileName);
 
   const fileBuffer = decodeDataUrl(dataUrl, mimeType);
 
@@ -105,15 +124,9 @@ export async function saveDataUrlAsset({
 }
 
 export async function readAsset(fileName: string) {
-  const sanitizedFileName = sanitizeFileName(fileName);
-
-  if (!sanitizedFileName || sanitizedFileName !== fileName) {
-    throw new Error("Invalid asset file name");
-  }
-
-  const absolutePath = join(assetDirectory, sanitizedFileName);
-  const data = await readFile(absolutePath);
-  const extension = extname(sanitizedFileName).toLowerCase();
+  const asset = getAssetPath(fileName);
+  const data = await readFile(asset.absolutePath);
+  const extension = extname(asset.fileName).toLowerCase();
 
   const mimeType =
     extension === ".png"
