@@ -1,5 +1,9 @@
 :80 {
-  handle /socket.io* {
+  handle /socket.io {
+    reverse_proxy realtime:3001
+  }
+
+  handle /socket.io/* {
     reverse_proxy realtime:3001
   }
 

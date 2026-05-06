@@ -65,6 +65,14 @@ function setCorsHeaders(request: IncomingMessage, response: ServerResponse) {
   );
 }
 
+function getSocketIoCorsOrigin() {
+  if (allowedOrigins.includes("*")) {
+    return true;
+  }
+
+  return allowedOrigins;
+}
+
 const initialNow = nowMs();
 
 const defaultPersistedDashboardState: PersistedDashboardState = {
@@ -476,7 +484,7 @@ const httpServer = createServer((request, response) => {
 const io = new SocketIOServer(httpServer, {
   path: "/socket.io",
   cors: {
-    origin: allowedOrigins,
+    origin: getSocketIoCorsOrigin(),
     methods: ["GET", "POST"],
   },
 });
