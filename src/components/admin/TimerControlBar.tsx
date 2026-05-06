@@ -173,7 +173,11 @@ export function TimerControlBar() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-cyan-400/20 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950/80 px-8 py-5 shadow-inner shadow-cyan-950/40">
+        <div className="relative rounded-2xl border border-cyan-400/20 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950/80 px-8 py-5 shadow-inner shadow-cyan-950/40">
+          <p className="absolute right-5 top-4 font-[family-name:var(--font-rajdhani)] text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100/35">
+            Latency ~{Math.round(estimatedOneWayLatencyMs)}ms
+          </p>
+
           <div className="grid h-full items-center gap-8 2xl:grid-cols-[340px_minmax(0,1fr)]">
             <div
               className={`flex flex-col items-center justify-center rounded-2xl border border-cyan-400/10 bg-slate-950/35 px-4 py-3 transition ${
@@ -250,9 +254,6 @@ export function TimerControlBar() {
                 </span>
               </div>
 
-              <p className="font-[family-name:var(--font-rajdhani)] text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100/35">
-                Latency ~{Math.round(estimatedOneWayLatencyMs)}ms
-              </p>
             </div>
           </div>
         </div>
