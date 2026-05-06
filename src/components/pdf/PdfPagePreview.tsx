@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import type {
+  PDFDocumentProxy,
+  RenderTask,
+} from "pdfjs-dist/types/src/display/api";
 
 export type PdfPagePreviewProps = {
   fileUrl: string | undefined;
@@ -30,25 +34,45 @@ export function PdfPagePreview({
   onPageLoadSuccess,
 }: PdfPagePreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const documentRef = useRef<PDFDocumentProxy | undefined>(undefined);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
     fileUrl ? "loading" : "idle",
+  );
+  const [documentRevision, setDocumentRevision] = useState(0);
+  const [hasRenderedPage, setHasRenderedPage] = useState(false);
+  const handleDocumentLoadSuccess = useEffectEvent((numPages: number) => {
+    onDocumentLoadSuccess?.(numPages);
+  });
+  const handlePageLoadSuccess = useEffectEvent(
+    (page: { width: number; height: number }) => {
+      onPageLoadSuccess?.(page);
+    },
   );
 
   useEffect(() => {
     if (!fileUrl) {
-      return;
+      documentRef.current = undefined;
+      let isMounted = true;
+
+      queueMicrotask(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setStatus("idle");
+        setHasRenderedPage(false);
+      });
+
+      return () => {
+        isMounted = false;
+      };
     }
 
     let cancelled = false;
-    let activeRenderTask:
-      | {
-          cancel?: () => void;
-          promise?: Promise<unknown>;
-        }
-      | undefined;
 
-    async function renderPage() {
+    async function loadDocument() {
       setStatus("loading");
+      setHasRenderedPage(false);
 
       try {
         const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -62,10 +86,49 @@ export function PdfPagePreview({
         const pdfDocument = await documentTask.promise;
 
         if (cancelled) {
+          pdfDocument.destroy?.();
           return;
         }
 
-        onDocumentLoadSuccess?.(pdfDocument.numPages);
+        documentRef.current = pdfDocument;
+        handleDocumentLoadSuccess(pdfDocument.numPages);
+        setDocumentRevision((currentRevision) => currentRevision + 1);
+      } catch (error) {
+        if (!cancelled) {
+          console.error(error);
+          documentRef.current = undefined;
+          setStatus("error");
+        }
+      }
+    }
+
+    void loadDocument();
+
+    return () => {
+      cancelled = true;
+      const activeDocument = documentRef.current;
+      documentRef.current = undefined;
+      activeDocument?.destroy?.();
+    };
+  }, [fileUrl]);
+
+  useEffect(() => {
+    const activeDocument = documentRef.current;
+
+    if (!fileUrl || !activeDocument) {
+      return;
+    }
+
+    let cancelled = false;
+    let activeRenderTask: RenderTask | undefined;
+
+    async function renderPage() {
+      try {
+        const pdfDocument = activeDocument;
+
+        if (!pdfDocument) {
+          return;
+        }
 
         const nextPageNumber = Math.min(
           Math.max(1, pageNumber),
@@ -78,7 +141,7 @@ export function PdfPagePreview({
         }
 
         const viewport = pdfPage.getViewport({ scale: 1 });
-        onPageLoadSuccess?.({
+        handlePageLoadSuccess({
           width: viewport.width,
           height: viewport.height,
         });
@@ -115,6 +178,7 @@ export function PdfPagePreview({
         await activeRenderTask.promise;
 
         if (!cancelled) {
+          setHasRenderedPage(true);
           setStatus("ready");
         }
       } catch (error) {
@@ -132,10 +196,9 @@ export function PdfPagePreview({
       activeRenderTask?.cancel?.();
     };
   }, [
+    documentRevision,
     fileUrl,
     height,
-    onDocumentLoadSuccess,
-    onPageLoadSuccess,
     pageNumber,
     width,
   ]);
@@ -155,11 +218,11 @@ export function PdfPagePreview({
       <canvas
         ref={canvasRef}
         className={`${pageClassName ?? ""} ${
-          status === "ready" ? "" : "invisible"
+          hasRenderedPage ? "" : "invisible"
         }`}
       />
 
-      {status === "loading" && (
+      {status === "loading" && !hasRenderedPage && (
         <div className="absolute inset-0 flex items-center justify-center text-center text-sm text-slate-500">
           {loadingLabel}
         </div>
