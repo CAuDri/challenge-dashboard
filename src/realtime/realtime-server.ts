@@ -4,7 +4,6 @@ config({ path: ".env.local" });
 config();
 
 import { createServer } from "node:http";
-import { monitorEventLoopDelay } from "node:perf_hooks";
 import { Server as SocketIOServer } from "socket.io";
 import { demoScreens } from "../config/demoScreens";
 import type { DisplayState } from "../types/display";
@@ -57,26 +56,6 @@ function setCorsHeaders(request: IncomingMessage, response: ServerResponse) {
     "Content-Type, Authorization",
   );
 }
-
-const eventLoopDelay = monitorEventLoopDelay({
-  resolution: 20,
-});
-
-eventLoopDelay.enable();
-
-setInterval(() => {
-  const meanMs = eventLoopDelay.mean / 1_000_000;
-  const p99Ms = eventLoopDelay.percentile(99) / 1_000_000;
-  const maxMs = eventLoopDelay.max / 1_000_000;
-
-  console.log(
-    `[event-loop] mean=${meanMs.toFixed(2)}ms p99=${p99Ms.toFixed(
-      2,
-    )}ms max=${maxMs.toFixed(2)}ms`,
-  );
-
-  eventLoopDelay.reset();
-}, 5_000);
 
 const initialNow = nowMs();
 
