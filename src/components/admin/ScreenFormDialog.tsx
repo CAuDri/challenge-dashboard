@@ -30,7 +30,6 @@ function createDefaultDraft(): ScreenDraft {
     name: "",
     description: "",
     type: "image",
-    thumbnailLabel: "Image",
     config: {
       image: {},
     },
@@ -55,18 +54,6 @@ function createDefaultTimerConfig(): TimerScreenConfig {
   };
 }
 
-function getDefaultThumbnailLabel(type: ScreenType) {
-  const labels: Record<ScreenType, string> = {
-    image: "Image",
-    pdf: "PDF",
-    camera: "Cam",
-    timer: "Timer",
-    scoreboard: "Scores",
-  };
-
-  return labels[type];
-}
-
 export function ScreenFormDialog({
   open,
   mode,
@@ -83,7 +70,6 @@ export function ScreenFormDialog({
       name: screen.name,
       description: screen.description,
       type: screen.type,
-      thumbnailLabel: screen.thumbnailLabel,
       config: screen.config,
     };
   }, [screen]);
@@ -107,15 +93,12 @@ export function ScreenFormDialog({
     };
   }, [initialDraft, open]);
 
-  const canSubmit =
-    draft.name.trim().length > 0 &&
-    draft.thumbnailLabel.trim().length > 0;
+  const canSubmit = draft.name.trim().length > 0;
 
   function handleTypeChange(type: ScreenType) {
     setDraft((currentDraft) => ({
       ...currentDraft,
       type,
-      thumbnailLabel: getDefaultThumbnailLabel(type),
       config:
         type === "image"
           ? {
@@ -181,7 +164,6 @@ export function ScreenFormDialog({
       ...draft,
       name: draft.name.trim(),
       description: draft.description.trim(),
-      thumbnailLabel: draft.thumbnailLabel.trim(),
     });
 
     onOpenChange(false);
@@ -588,24 +570,6 @@ export function ScreenFormDialog({
               </div>
             </div>
           )}
-
-          <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-              Thumbnail Label
-            </span>
-            <input
-              type="text"
-              value={draft.thumbnailLabel}
-              onChange={(event) =>
-                setDraft((currentDraft) => ({
-                  ...currentDraft,
-                  thumbnailLabel: event.target.value,
-                }))
-              }
-              className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-lg font-semibold text-slate-50 outline-none transition focus:border-cyan-400"
-              placeholder="Short preview label"
-            />
-          </label>
 
           <div className="flex justify-end gap-3 border-t border-slate-800 pt-5">
             <button

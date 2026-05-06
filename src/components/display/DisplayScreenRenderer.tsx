@@ -57,12 +57,6 @@ function PlaceholderDisplayScreen({ screen }: { screen: ScreenDefinition }) {
           CAuDri-Challenge
         </p>
 
-        <div className="mt-10 inline-flex rounded-3xl border border-cyan-400/30 bg-cyan-400/10 px-10 py-6">
-          <span className="font-[family-name:var(--font-rajdhani)] text-7xl font-bold uppercase tracking-wide text-cyan-100">
-            {screen.thumbnailLabel}
-          </span>
-        </div>
-
         <h1 className="mt-10 font-[family-name:var(--font-rajdhani)] text-7xl font-bold tracking-tight">
           {screen.name}
         </h1>

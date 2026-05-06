@@ -101,17 +101,18 @@ function getRankedTeams(teams: Team[], disciplineId: DisciplineId | undefined) {
     .slice(0, 4);
 }
 
-function LabelThumbnail({ screen }: { screen: ScreenDefinition }) {
-  return (
-    <span className="rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-5 py-3 font-[family-name:var(--font-rajdhani)] text-2xl font-bold uppercase tracking-wide text-cyan-200">
-      {screen.thumbnailLabel}
-    </span>
-  );
-}
-
 function ImageThumbnail({ screen }: { screen: ScreenDefinition }) {
   if (!screen.config?.image?.imageUrl) {
-    return <LabelThumbnail screen={screen} />;
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-slate-900 to-slate-950 text-center">
+        <p className="font-[family-name:var(--font-rajdhani)] text-2xl font-bold uppercase tracking-wide text-cyan-100">
+          Image Preview
+        </p>
+        <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+          No image selected
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -317,11 +318,9 @@ function ScoreboardThumbnail({
 }
 
 function PlaceholderThumbnail({
-  screen,
   icon,
   label,
 }: {
-  screen: ScreenDefinition;
   icon: ReactNode;
   label: string;
 }) {
@@ -330,14 +329,9 @@ function PlaceholderThumbnail({
       <div className="flex size-14 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-200">
         {icon}
       </div>
-      <div>
-        <p className="font-[family-name:var(--font-rajdhani)] text-2xl font-bold uppercase tracking-wide text-cyan-100">
-          {screen.thumbnailLabel}
-        </p>
-        <p className="mt-1 text-xs uppercase tracking-[0.22em] text-slate-500">
-          {label}
-        </p>
-      </div>
+      <p className="font-[family-name:var(--font-rajdhani)] text-2xl font-bold uppercase tracking-wide text-cyan-100">
+        {label}
+      </p>
     </div>
   );
 }
@@ -355,15 +349,13 @@ export function ScreenThumbnail(props: ScreenThumbnailProps) {
     case "pdf":
       return (
         <PlaceholderThumbnail
-          screen={screen}
           icon={<FileText className="size-7" />}
-          label="Presentation Preview"
+          label="PDF Preview"
         />
       );
     case "camera":
       return (
         <PlaceholderThumbnail
-          screen={screen}
           icon={<Video className="size-7" />}
           label="Camera Preview"
         />

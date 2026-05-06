@@ -11,7 +11,8 @@ import {
   type ScreenType,
 } from "@/types/screen";
 import { demoScreens } from "@/config/demoScreens";
-import { Plus } from "lucide-react";
+import { Clock3, FileText, Image, Plus, Trophy, Video } from "lucide-react";
+import type { ComponentType, SVGProps } from "react";
 
 const builtInScreenIds = new Set(demoScreens.map((screen) => screen.id));
 const screenSectionOrder: ScreenType[] = [
@@ -21,6 +22,17 @@ const screenSectionOrder: ScreenType[] = [
   "pdf",
   "camera",
 ];
+
+const screenSectionIcons: Record<
+  ScreenType,
+  ComponentType<SVGProps<SVGSVGElement>>
+> = {
+  image: Image,
+  timer: Clock3,
+  scoreboard: Trophy,
+  pdf: FileText,
+  camera: Video,
+};
 
 function groupScreensByType(screens: ScreenDefinition[]) {
   return screenSectionOrder
@@ -133,17 +145,27 @@ export function ScreenSelectionPanel() {
         <div className="space-y-8">
           {groupedScreens.map((group) => (
             <section key={group.id} className="space-y-3">
-              <div className="flex items-end justify-between gap-4 border-b border-slate-800/80 pb-2">
-                <div>
-                  <h3 className="font-[family-name:var(--font-rajdhani)] text-2xl font-bold uppercase tracking-wide text-cyan-100">
-                    {group.name}
-                  </h3>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {group.description}
-                  </p>
+              <div className="flex items-end justify-between gap-4 border-b border-cyan-400/20 bg-slate-950/35 px-4 py-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-200">
+                    {(() => {
+                      const SectionIcon = screenSectionIcons[group.id];
+
+                      return <SectionIcon className="size-5" />;
+                    })()}
+                  </div>
+
+                  <div className="min-w-0">
+                    <h3 className="font-[family-name:var(--font-rajdhani)] text-2xl font-bold uppercase tracking-wide text-cyan-100">
+                      {group.name}
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {group.description}
+                    </p>
+                  </div>
                 </div>
 
-                <p className="shrink-0 font-[family-name:var(--font-rajdhani)] text-sm font-bold uppercase tracking-[0.22em] text-slate-600">
+                <p className="shrink-0 rounded-full border border-slate-800 bg-slate-950 px-3 py-1 font-[family-name:var(--font-rajdhani)] text-sm font-bold uppercase tracking-[0.22em] text-slate-500">
                   {screenTypeCounts[group.id]}{" "}
                   {screenTypeCounts[group.id] === 1 ? "Screen" : "Screens"}
                 </p>

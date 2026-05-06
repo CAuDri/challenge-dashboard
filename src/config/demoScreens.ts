@@ -6,14 +6,12 @@ export const demoScreens: ScreenDefinition[] = [
     name: "Fallback Image",
     description: "Default display if no other screen is active.",
     type: "image",
-    thumbnailLabel: "Fallback",
   },
   {
     id: "timer-simple",
     name: "Simple Timer",
     description: "Fullscreen timer without additional run information.",
     type: "timer",
-    thumbnailLabel: "Timer",
     config: {
       timer: {
         layout: "timer_only",
@@ -37,7 +35,6 @@ export const demoScreens: ScreenDefinition[] = [
     name: "Run Timer",
     description: "Timer screen with current team, discipline and run phase.",
     type: "timer",
-    thumbnailLabel: "Run Timer",
     config: {
       timer: {
         layout: "run_info",
@@ -61,7 +58,6 @@ export const demoScreens: ScreenDefinition[] = [
     name: "Freedrive Course Results",
     description: "Manual reveal scoreboard for the Freedrive Course.",
     type: "scoreboard",
-    thumbnailLabel: "Freedrive",
     config: {
       scoreboard: {
         disciplineId: "freedrive",
@@ -74,7 +70,6 @@ export const demoScreens: ScreenDefinition[] = [
     name: "Obstacle Evasion Course Results",
     description: "Manual reveal scoreboard for the Obstacle Evasion Course.",
     type: "scoreboard",
-    thumbnailLabel: "Obstacle",
     config: {
       scoreboard: {
         disciplineId: "obstacle_evasion",
@@ -87,7 +82,6 @@ export const demoScreens: ScreenDefinition[] = [
     name: "Navigation Course Results",
     description: "Manual reveal scoreboard for the Navigation Course.",
     type: "scoreboard",
-    thumbnailLabel: "Navigation",
     config: {
       scoreboard: {
         disciplineId: "navigation",
@@ -100,13 +94,11 @@ export const demoScreens: ScreenDefinition[] = [
     name: "PDF Presentation",
     description: "Slideshow for welcome messages, rules or sponsors.",
     type: "pdf",
-    thumbnailLabel: "PDF",
   },
   {
     id: "camera",
     name: "Camera Stream",
     description: "Live feed from a network or track camera.",
     type: "camera",
-    thumbnailLabel: "Cam",
   },
 ];

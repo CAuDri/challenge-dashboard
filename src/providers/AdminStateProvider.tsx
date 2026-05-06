@@ -182,7 +182,6 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
       name: screenDraft.name,
       description: screenDraft.description,
       type: screenDraft.type,
-      thumbnailLabel: screenDraft.thumbnailLabel,
       config: screenDraft.config,
     };
 
@@ -200,7 +199,6 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
               name: screenDraft.name,
               description: screenDraft.description,
               type: screenDraft.type,
-              thumbnailLabel: screenDraft.thumbnailLabel,
               config: screenDraft.config,
             }
           : screen,

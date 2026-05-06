@@ -25,7 +25,6 @@ export type ScreenDefinition = {
   name: string;
   description: string;
   type: ScreenType;
-  thumbnailLabel: string;
   config?: ScreenConfig;
 };
 
@@ -33,7 +32,6 @@ export type ScreenDraft = {
   name: string;
   description: string;
   type: ScreenType;
-  thumbnailLabel: string;
   config?: ScreenConfig;
 };
 

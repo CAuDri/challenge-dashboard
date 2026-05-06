@@ -120,10 +120,6 @@ export function ScreenCard({
           currentRun={currentRun}
           timer={timer}
         />
-
-        <span className="absolute left-4 top-4 rounded-full border border-slate-700 bg-slate-950/85 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
-          {screen.type}
-        </span>
       </div>
 
       <div className="space-y-3 p-5">
