@@ -1,5 +1,6 @@
 "use client";
 
+import { CameraDisplayScreen } from "@/components/display/CameraDisplayScreen";
 import { PdfDisplayScreen } from "@/components/display/PdfDisplayScreen";
 import { ScoreboardDisplayScreen } from "@/components/display/ScoreboardDisplayScreen";
 import { TimerDisplayScreen } from "@/components/display/TimerDisplayScreen";
@@ -50,30 +51,6 @@ function ImageDisplayScreen({ screen }: { screen: ScreenDefinition }) {
   );
 }
 
-function PlaceholderDisplayScreen({ screen }: { screen: ScreenDefinition }) {
-  return (
-    <main className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 text-white">
-      <section className="text-center">
-        <p className="font-[family-name:var(--font-rajdhani)] text-2xl font-semibold uppercase tracking-[0.5em] text-cyan-300">
-          CAuDri-Challenge
-        </p>
-
-        <h1 className="mt-10 font-[family-name:var(--font-rajdhani)] text-7xl font-bold tracking-tight">
-          {screen.name}
-        </h1>
-
-        <p className="mt-4 text-2xl uppercase tracking-[0.35em] text-slate-400">
-          {screen.type}
-        </p>
-
-        <p className="mx-auto mt-8 max-w-3xl text-xl leading-8 text-slate-300">
-          {screen.description}
-        </p>
-      </section>
-    </main>
-  );
-}
-
 export function DisplayScreenRenderer({
   screen,
   teams,
@@ -101,6 +78,6 @@ export function DisplayScreenRenderer({
       return <PdfDisplayScreen screen={screen} />;
 
     case "camera":
-      return <PlaceholderDisplayScreen screen={screen} />;
+      return <CameraDisplayScreen screen={screen} />;
   }
 }

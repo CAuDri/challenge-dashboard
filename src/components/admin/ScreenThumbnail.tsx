@@ -2,6 +2,7 @@
 
 import { FileText, Trophy, Video } from "lucide-react";
 import type { ReactNode } from "react";
+import { CameraStreamView } from "@/components/camera/CameraStreamView";
 import { PdfPagePreview } from "@/components/pdf/PdfPagePreview";
 import type { CurrentRunState, RunPhase } from "@/types/run";
 import type { ScreenDefinition, TimerScreenConfig } from "@/types/screen";
@@ -365,7 +366,16 @@ export function ScreenThumbnail(props: ScreenThumbnailProps) {
         />
       );
     case "camera":
-      return (
+      return screen.config?.camera?.sourceUrl ? (
+        <CameraStreamView
+          sourceType={screen.config.camera.sourceType}
+          sourceUrl={screen.config.camera.sourceUrl}
+          className="h-full w-full bg-black"
+          mediaClassName="bg-black"
+          loadingLabel="Loading camera..."
+          errorLabel="Camera unavailable"
+        />
+      ) : (
         <PlaceholderThumbnail
           icon={<Video className="size-7" />}
           label="Camera Preview"

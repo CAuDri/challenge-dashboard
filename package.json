@@ -16,6 +16,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
     "framer-motion": "^12.38.0",
+    "hls.js": "^1.6.16",
     "lucide-react": "^1.14.0",
     "next": "16.2.4",
     "pdfjs-dist": "^5.7.284",

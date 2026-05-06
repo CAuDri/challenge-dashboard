@@ -15,6 +15,13 @@ export type PdfScreenConfig = {
   previewPage: number;
 };
 
+export type CameraSourceType = "mjpeg" | "hls" | "whep";
+
+export type CameraScreenConfig = {
+  sourceType: CameraSourceType;
+  sourceUrl: string;
+};
+
 export type ScoreboardScreenConfig = {
   disciplineId: DisciplineId;
   revealMode: "manual";
@@ -23,6 +30,7 @@ export type ScoreboardScreenConfig = {
 export type ScreenConfig = {
   image?: ImageScreenConfig;
   pdf?: PdfScreenConfig;
+  camera?: CameraScreenConfig;
   scoreboard?: ScoreboardScreenConfig;
   timer?: TimerScreenConfig;
 };

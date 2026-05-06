@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   screenTypes,
+  type CameraSourceType,
   type ScreenDefinition,
   type ScreenDraft,
   type ScreenType,
@@ -52,6 +53,13 @@ function createDefaultTimerConfig(): TimerScreenConfig {
     useTeamColorAccent: true,
     timerScale: 1,
     showMilliseconds: "during_running",
+  };
+}
+
+function createDefaultCameraConfig() {
+  return {
+    sourceType: "mjpeg" as CameraSourceType,
+    sourceUrl: "",
   };
 }
 
@@ -121,6 +129,11 @@ export function ScreenFormDialog({
                   pdfUrl: currentDraft.config?.pdf?.pdfUrl,
                   pdfFileName: currentDraft.config?.pdf?.pdfFileName,
                 },
+              }
+          : type === "camera"
+            ? {
+                ...currentDraft.config,
+                camera: currentDraft.config?.camera ?? createDefaultCameraConfig(),
               }
           : type === "timer"
             ? {
@@ -769,6 +782,100 @@ export function ScreenFormDialog({
                     />
                   </label>
                 )}
+              </div>
+            </div>
+          )}
+
+          {draft.type === "camera" && (
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                Camera Source
+              </span>
+
+              <div className="mt-2 grid gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    ["mjpeg", "MJPEG"],
+                    ["hls", "HLS"],
+                    ["whep", "WHEP"],
+                  ].map(([sourceType, label]) => {
+                    const checked =
+                      (draft.config?.camera?.sourceType ?? "mjpeg") ===
+                      sourceType;
+
+                    return (
+                      <label
+                        key={sourceType}
+                        className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 transition ${
+                          checked
+                            ? "border-cyan-400/70 bg-cyan-400/10 text-cyan-100"
+                            : "border-slate-800 bg-slate-950 text-slate-400 hover:border-cyan-400/40"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="camera-source-type"
+                          checked={checked}
+                          onChange={() =>
+                            setDraft((currentDraft) => ({
+                              ...currentDraft,
+                              config: {
+                                ...currentDraft.config,
+                                camera: {
+                                  sourceType:
+                                    sourceType as CameraSourceType,
+                                  sourceUrl:
+                                    currentDraft.config?.camera?.sourceUrl ?? "",
+                                },
+                              },
+                            }))
+                          }
+                          className="h-4 w-4 accent-cyan-400"
+                        />
+                        <span className="font-semibold text-slate-100">
+                          {label}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                <label className="block">
+                  <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                    Source URL
+                  </span>
+                  <input
+                    type="url"
+                    value={draft.config?.camera?.sourceUrl ?? ""}
+                    onChange={(event) =>
+                      setDraft((currentDraft) => ({
+                        ...currentDraft,
+                        config: {
+                          ...currentDraft.config,
+                          camera: {
+                            sourceType:
+                              currentDraft.config?.camera?.sourceType ?? "mjpeg",
+                            sourceUrl: event.target.value,
+                          },
+                        },
+                      }))
+                    }
+                    className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-50 outline-none transition focus:border-cyan-400"
+                    placeholder={
+                      draft.config?.camera?.sourceType === "hls"
+                        ? "https://camera.example/stream.m3u8"
+                        : draft.config?.camera?.sourceType === "whep"
+                          ? "https://camera.example/whep"
+                          : "https://camera.example/video.mjpg"
+                    }
+                  />
+                </label>
+
+                <p className="text-xs leading-5 text-slate-500">
+                  Use a browser-accessible MJPEG URL, HLS playlist, or WHEP
+                  endpoint. Native RTSP is not supported directly in the
+                  browser.
+                </p>
               </div>
             </div>
           )}

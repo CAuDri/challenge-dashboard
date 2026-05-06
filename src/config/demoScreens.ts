@@ -105,5 +105,11 @@ export const demoScreens: ScreenDefinition[] = [
     name: "Camera Stream",
     description: "Live feed from a network or track camera.",
     type: "camera",
+    config: {
+      camera: {
+        sourceType: "mjpeg",
+        sourceUrl: "",
+      },
+    },
   },
 ];
