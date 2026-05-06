@@ -94,6 +94,11 @@ export const demoScreens: ScreenDefinition[] = [
     name: "PDF Presentation",
     description: "Slideshow for welcome messages, rules or sponsors.",
     type: "pdf",
+    config: {
+      pdf: {
+        previewPage: 1,
+      },
+    },
   },
   {
     id: "camera",

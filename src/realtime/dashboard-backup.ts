@@ -21,10 +21,16 @@ function collectReferencedAssetFileNames(state: PersistedDashboardState) {
   }
 
   for (const screen of state.screens) {
-    const fileName = getAssetFileNameFromUrl(screen.config?.image?.imageUrl);
+    const imageFileName = getAssetFileNameFromUrl(screen.config?.image?.imageUrl);
 
-    if (fileName) {
-      fileNames.add(fileName);
+    if (imageFileName) {
+      fileNames.add(imageFileName);
+    }
+
+    const pdfFileName = getAssetFileNameFromUrl(screen.config?.pdf?.pdfUrl);
+
+    if (pdfFileName) {
+      fileNames.add(pdfFileName);
     }
   }
 

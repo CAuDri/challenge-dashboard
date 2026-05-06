@@ -9,6 +9,12 @@ export type ImageScreenConfig = {
   imageFileName?: string;
 };
 
+export type PdfScreenConfig = {
+  pdfUrl?: string;
+  pdfFileName?: string;
+  previewPage: number;
+};
+
 export type ScoreboardScreenConfig = {
   disciplineId: DisciplineId;
   revealMode: "manual";
@@ -16,6 +22,7 @@ export type ScoreboardScreenConfig = {
 
 export type ScreenConfig = {
   image?: ImageScreenConfig;
+  pdf?: PdfScreenConfig;
   scoreboard?: ScoreboardScreenConfig;
   timer?: TimerScreenConfig;
 };

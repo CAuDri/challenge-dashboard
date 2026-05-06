@@ -2,6 +2,7 @@
 
 import { FileText, Trophy, Video } from "lucide-react";
 import type { ReactNode } from "react";
+import { PdfPagePreview } from "@/components/pdf/PdfPagePreview";
 import type { CurrentRunState, RunPhase } from "@/types/run";
 import type { ScreenDefinition, TimerScreenConfig } from "@/types/screen";
 import { disciplines, type DisciplineId, type Team } from "@/types/team";
@@ -347,7 +348,17 @@ export function ScreenThumbnail(props: ScreenThumbnailProps) {
     case "scoreboard":
       return <ScoreboardThumbnail screen={screen} teams={props.teams} />;
     case "pdf":
-      return (
+      return screen.config?.pdf?.pdfUrl ? (
+        <div className="flex h-full w-full items-center justify-center bg-slate-950">
+          <PdfPagePreview
+            fileUrl={screen.config.pdf.pdfUrl}
+            pageNumber={screen.config.pdf.previewPage ?? 1}
+            width={320}
+            className="flex h-full w-full items-center justify-center bg-slate-950"
+            loadingLabel="Loading PDF preview..."
+          />
+        </div>
+      ) : (
         <PlaceholderThumbnail
           icon={<FileText className="size-7" />}
           label="PDF Preview"

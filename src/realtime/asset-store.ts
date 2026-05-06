@@ -19,6 +19,7 @@ const allowedMimeTypes = new Map<string, string>([
   ["image/jpeg", ".jpg"],
   ["image/svg+xml", ".svg"],
   ["image/webp", ".webp"],
+  ["application/pdf", ".pdf"],
 ]);
 
 function sanitizeOriginalFileName(fileName: string) {
@@ -157,6 +158,8 @@ export async function readAsset(fileName: string) {
           ? "image/svg+xml"
           : extension === ".webp"
             ? "image/webp"
+            : extension === ".pdf"
+              ? "application/pdf"
             : "application/octet-stream";
 
   return {

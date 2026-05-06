@@ -1,5 +1,6 @@
 "use client";
 
+import { PdfDisplayScreen } from "@/components/display/PdfDisplayScreen";
 import { ScoreboardDisplayScreen } from "@/components/display/ScoreboardDisplayScreen";
 import { TimerDisplayScreen } from "@/components/display/TimerDisplayScreen";
 import type { CurrentRunState } from "@/types/run";
@@ -97,6 +98,8 @@ export function DisplayScreenRenderer({
       );
 
     case "pdf":
+      return <PdfDisplayScreen screen={screen} />;
+
     case "camera":
       return <PlaceholderDisplayScreen screen={screen} />;
   }

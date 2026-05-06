@@ -14,6 +14,7 @@ import {
   type ScreenType,
   type TimerScreenConfig,
 } from "@/types/screen";
+import { PdfPagePreview } from "@/components/pdf/PdfPagePreview";
 import { uploadAsset } from "@/lib/realtime/assets";
 import { readFileAsDataUrl } from "@/lib/files/readFileAsDataUrl";
 
@@ -54,6 +55,10 @@ function createDefaultTimerConfig(): TimerScreenConfig {
   };
 }
 
+function clampPdfPreviewPage(pageNumber: number, numPages: number) {
+  return Math.min(Math.max(1, pageNumber), Math.max(1, numPages));
+}
+
 export function ScreenFormDialog({
   open,
   mode,
@@ -76,6 +81,8 @@ export function ScreenFormDialog({
 
   const [draft, setDraft] = useState<ScreenDraft>(initialDraft);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const [pdfPageCount, setPdfPageCount] = useState(1);
 
   useEffect(() => {
     let isMounted = true;
@@ -84,6 +91,7 @@ export function ScreenFormDialog({
       queueMicrotask(() => {
         if (isMounted) {
           setDraft(initialDraft);
+          setPdfPageCount(1);
         }
       });
     }
@@ -105,6 +113,15 @@ export function ScreenFormDialog({
               ...currentDraft.config,
               image: currentDraft.config?.image ?? {},
             }
+          : type === "pdf"
+            ? {
+                ...currentDraft.config,
+                pdf: {
+                  previewPage: currentDraft.config?.pdf?.previewPage ?? 1,
+                  pdfUrl: currentDraft.config?.pdf?.pdfUrl,
+                  pdfFileName: currentDraft.config?.pdf?.pdfFileName,
+                },
+              }
           : type === "timer"
             ? {
                 ...currentDraft.config,
@@ -152,6 +169,44 @@ export function ScreenFormDialog({
     } catch (error) {
       console.error(error);
       window.alert("Failed to upload image.");
+    }
+  }
+
+  async function handlePdfFileChange(file: File | undefined) {
+    if (!file) {
+      return;
+    }
+
+    if (file.type !== "application/pdf") {
+      window.alert("Please select a PDF file.");
+      return;
+    }
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+
+      const uploadedAsset = await uploadAsset({
+        fileName: file.name,
+        mimeType: file.type,
+        dataUrl,
+        prefix: "screen-pdf",
+      });
+
+      setDraft((currentDraft) => ({
+        ...currentDraft,
+        config: {
+          ...currentDraft.config,
+          pdf: {
+            previewPage: currentDraft.config?.pdf?.previewPage ?? 1,
+            pdfUrl: uploadedAsset.assetUrl,
+            pdfFileName: file.name,
+          },
+        },
+      }));
+      setPdfPageCount(1);
+    } catch (error) {
+      console.error(error);
+      window.alert("Failed to upload PDF.");
     }
   }
 
@@ -332,6 +387,153 @@ export function ScreenFormDialog({
                   ) : (
                     <span className="text-center text-xs uppercase tracking-[0.2em] text-slate-600">
                       Click to choose image
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {draft.type === "pdf" && (
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                PDF File
+              </span>
+
+              <div className="mt-2 grid gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-4 md:grid-cols-[minmax(0,1fr)_220px]">
+                <div className="flex flex-col justify-center gap-3">
+                  <input
+                    ref={pdfInputRef}
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    className="hidden"
+                    onChange={(event) => {
+                      void handlePdfFileChange(event.target.files?.[0]);
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => pdfInputRef.current?.click()}
+                    className="w-fit rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300 hover:bg-cyan-400/20"
+                  >
+                    Choose PDF
+                  </button>
+
+                  {draft.config?.pdf?.pdfFileName && (
+                    <p className="text-sm text-slate-400">
+                      Selected:{" "}
+                      <span className="font-medium text-slate-200">
+                        {draft.config.pdf.pdfFileName}
+                      </span>
+                    </p>
+                  )}
+
+                  <label className="block max-w-44">
+                    <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                      Preview Page
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={pdfPageCount}
+                      value={draft.config?.pdf?.previewPage ?? 1}
+                      onChange={(event) =>
+                        setDraft((currentDraft) => ({
+                          ...currentDraft,
+                          config: {
+                            ...currentDraft.config,
+                            pdf: {
+                              previewPage: clampPdfPreviewPage(
+                                Number(event.target.value) || 1,
+                                pdfPageCount,
+                              ),
+                              pdfUrl: currentDraft.config?.pdf?.pdfUrl,
+                              pdfFileName: currentDraft.config?.pdf?.pdfFileName,
+                            },
+                          },
+                        }))
+                      }
+                      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none transition focus:border-cyan-400"
+                    />
+                    <p className="mt-2 text-xs text-slate-500">
+                      Also used as the initial page on the display.
+                    </p>
+                  </label>
+
+                  {draft.config?.pdf?.pdfUrl && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDraft((currentDraft) => ({
+                          ...currentDraft,
+                          config: {
+                            ...currentDraft.config,
+                            pdf: {
+                              previewPage: 1,
+                              pdfUrl: undefined,
+                              pdfFileName: undefined,
+                            },
+                          },
+                        }))
+                      }
+                      className="w-fit text-sm font-semibold text-rose-300 transition hover:text-rose-200"
+                    >
+                      Remove PDF
+                    </button>
+                  )}
+
+                  <p className="text-xs leading-5 text-slate-500">
+                    Uploaded PDFs are stored by the realtime server and
+                    included in dashboard backups when referenced by a screen.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => pdfInputRef.current?.click()}
+                  className="flex aspect-video items-center justify-center overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 transition hover:border-cyan-400/50 hover:bg-slate-900"
+                  aria-label="Choose PDF file"
+                >
+                  {draft.config?.pdf?.pdfUrl ? (
+                    <PdfPagePreview
+                      fileUrl={draft.config.pdf.pdfUrl}
+                      pageNumber={draft.config.pdf.previewPage}
+                      width={220}
+                      className="flex h-full w-full items-center justify-center bg-slate-950"
+                      loadingLabel="Loading PDF preview..."
+                      onDocumentLoadSuccess={(numPages) => {
+                        setPdfPageCount(numPages);
+                        setDraft((currentDraft) => {
+                          const currentPreviewPage =
+                            currentDraft.config?.pdf?.previewPage ?? 1;
+                          const nextPreviewPage = clampPdfPreviewPage(
+                            currentPreviewPage,
+                            numPages,
+                          );
+
+                          if (currentPreviewPage === nextPreviewPage) {
+                            return currentDraft;
+                          }
+
+                          return {
+                            ...currentDraft,
+                            config: {
+                              ...currentDraft.config,
+                              pdf: {
+                                previewPage: nextPreviewPage,
+                                pdfUrl: currentDraft.config?.pdf?.pdfUrl,
+                                pdfFileName:
+                                  currentDraft.config?.pdf?.pdfFileName,
+                              },
+                            },
+                          };
+                        });
+                      }}
+                    />
+                  ) : (
+                    <span className="text-center text-xs uppercase tracking-[0.2em] text-slate-600">
+                      Click to choose PDF
                     </span>
                   )}
                 </button>
