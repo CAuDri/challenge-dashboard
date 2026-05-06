@@ -178,8 +178,8 @@ export function PdfPagePreview({
 
         canvas.width = Math.ceil(renderViewport.width);
         canvas.height = Math.ceil(renderViewport.height);
-        canvas.style.width = `${cssViewport.width}px`;
-        canvas.style.height = `${cssViewport.height}px`;
+        canvas.style.width = `${cssViewport.width + 0.5}px`;
+        canvas.style.height = `${cssViewport.height + 0.5}px`;
 
         activeRenderTask = pdfPage.render({
           canvas,
@@ -226,10 +226,10 @@ export function PdfPagePreview({
   }
 
   return (
-    <div className={`relative ${className ?? ""}`}>
+    <div className={`relative overflow-hidden ${className ?? ""}`}>
       <canvas
         ref={canvasRef}
-        className={`${pageClassName ?? ""} ${
+        className={`block ${pageClassName ?? ""} ${
           hasRenderedPage ? "" : "invisible"
         }`}
       />
