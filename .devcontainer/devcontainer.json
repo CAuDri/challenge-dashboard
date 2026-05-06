@@ -5,7 +5,7 @@
   "workspaceFolder": "/workspace",
   "shutdownAction": "stopCompose",
   "forwardPorts": [3000, 3001],
-  "postCreateCommand": "pnpm install",
+  "postCreateCommand": "pnpm install -y",
   "customizations": {
     "vscode": {
       "extensions": [

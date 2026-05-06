@@ -14,6 +14,8 @@ import {
   type ScreenType,
   type TimerScreenConfig,
 } from "@/types/screen";
+import { uploadAsset } from "@/lib/realtime/assets";
+import { readFileAsDataUrl } from "@/lib/files/readFileAsDataUrl";
 
 type ScreenFormDialogProps = {
   open: boolean;
@@ -63,24 +65,6 @@ function getDefaultThumbnailLabel(type: ScreenType) {
   };
 
   return labels[type];
-}
-
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      if (typeof reader.result !== "string") {
-        reject(new Error("Failed to read file."));
-        return;
-      }
-
-      resolve(reader.result);
-    };
-
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
 }
 
 export function ScreenFormDialog({
@@ -142,31 +126,40 @@ export function ScreenFormDialog({
       return;
     }
 
-    const allowedTypes = [
-      "image/svg+xml",
-      "image/png",
-      "image/jpeg",
-      "image/webp",
-    ];
-
-    if (!allowedTypes.includes(file.type)) {
-      window.alert("Please select an SVG, PNG, JPG or WebP image.");
+    if (
+      !["image/png", "image/jpeg", "image/svg+xml", "image/webp"].includes(
+        file.type,
+      )
+    ) {
+      window.alert("Please select a PNG, JPG, SVG or WebP image.");
       return;
     }
 
-    const imageUrl = await readFileAsDataUrl(file);
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
 
-    setDraft((currentDraft) => ({
-      ...currentDraft,
-      config: {
-        ...currentDraft.config,
-        image: {
-          ...currentDraft.config?.image,
-          imageUrl,
-          imageFileName: file.name,
+      const uploadedAsset = await uploadAsset({
+        fileName: file.name,
+        mimeType: file.type,
+        dataUrl,
+        prefix: "screen-image",
+      });
+
+      setDraft((currentDraft) => ({
+        ...currentDraft,
+        config: {
+          ...currentDraft.config,
+          image: {
+            ...currentDraft.config?.image,
+            imageUrl: uploadedAsset.assetUrl,
+            imageFileName: file.name,
+          },
         },
-      },
-    }));
+      }));
+    } catch (error) {
+      console.error(error);
+      window.alert("Failed to upload image.");
+    }
   }
 
   function handleSubmit() {
@@ -279,11 +272,10 @@ export function ScreenFormDialog({
                 <div className="flex flex-col justify-center gap-3">
                   <input
                     type="file"
-                    accept="image/svg+xml,image/png,image/jpeg,image/webp"
-                    onChange={(event) =>
-                      handleImageFileChange(event.target.files?.[0])
-                    }
-                    className="block w-full text-sm text-slate-400 file:mr-4 file:rounded-xl file:border-0 file:bg-cyan-400 file:px-4 file:py-2 file:font-semibold file:text-slate-950 hover:file:bg-cyan-300"
+                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                    onChange={(event) => {
+                      void handleImageFileChange(event.target.files?.[0]);
+                    }}
                   />
 
                   {draft.config?.image?.imageFileName && (

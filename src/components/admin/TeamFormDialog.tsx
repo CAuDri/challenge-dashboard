@@ -14,6 +14,8 @@ import {
   type TeamDraft,
 } from "@/types/team";
 import { PencilLine, Pipette } from "lucide-react";
+import { uploadAsset } from "@/lib/realtime/assets";
+import { readFileAsDataUrl } from "@/lib/files/readFileAsDataUrl";
 
 type TeamFormDialogProps = {
   open: boolean;
@@ -37,24 +39,6 @@ type WindowWithEyeDropper = Window & {
 
 function isValidHexColor(value: string) {
   return /^#[0-9A-Fa-f]{6}$/.test(value);
-}
-
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      if (typeof reader.result !== "string") {
-        reject(new Error("Failed to read file."));
-        return;
-      }
-
-      resolve(reader.result);
-    };
-
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
 }
 
 function createDefaultDraft(): TeamDraft {
@@ -124,25 +108,39 @@ export function TeamFormDialog({
 
   const canSubmit = draft.name.trim().length > 0;
 
-  async function handleLogoChange(file: File | undefined) {
+  async function handleLogoFileChange(file: File | undefined) {
     if (!file) {
       return;
     }
 
-    const allowedTypes = ["image/svg+xml", "image/png"];
-
-    if (!allowedTypes.includes(file.type)) {
-      window.alert("Please select a transparent SVG or PNG file.");
+    if (
+      !["image/png", "image/jpeg", "image/svg+xml", "image/webp"].includes(
+        file.type,
+      )
+    ) {
+      window.alert("Please select a PNG, JPG, SVG or WebP image.");
       return;
     }
 
-    const logoUrl = await readFileAsDataUrl(file);
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
 
-    setDraft((currentDraft) => ({
-      ...currentDraft,
-      logoUrl,
-      logoFileName: file.name,
-    }));
+      const uploadedAsset = await uploadAsset({
+        fileName: file.name,
+        mimeType: file.type,
+        dataUrl,
+        prefix: "team-logo",
+      });
+
+      setDraft((currentDraft) => ({
+        ...currentDraft,
+        logoUrl: uploadedAsset.assetUrl,
+        logoFileName: file.name,
+      }));
+    } catch (error) {
+      console.error(error);
+      window.alert("Failed to upload team logo.");
+    }
   }
 
   function handleDisciplineToggle(
@@ -229,11 +227,10 @@ export function TeamFormDialog({
               <div className="flex flex-col justify-center gap-3">
                 <input
                   type="file"
-                  accept="image/svg+xml,image/png"
-                  onChange={(event) =>
-                    handleLogoChange(event.target.files?.[0])
-                  }
-                  className="block w-full text-sm text-slate-400 file:mr-4 file:rounded-xl file:border-0 file:bg-cyan-400 file:px-4 file:py-2 file:font-semibold file:text-slate-950 hover:file:bg-cyan-300"
+                  accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                  onChange={(event) => {
+                    void handleLogoFileChange(event.target.files?.[0]);
+                  }}
                 />
 
                 {draft.logoFileName && (

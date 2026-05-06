@@ -1,3 +1,8 @@
+import { config } from "dotenv";
+
+config({ path: ".env.local" });
+config();
+
 import { createServer } from "node:http";
 import { monitorEventLoopDelay } from "node:perf_hooks";
 import { Server as SocketIOServer } from "socket.io";
@@ -6,8 +11,11 @@ import type { DisplayState } from "../types/display";
 import {
   loadPersistedDashboardState,
   savePersistedDashboardStateDebounced,
-  type PersistedDashboardState,
 } from "./state-store";
+import type { PersistedDashboardState } from "@/types/persistence";
+import { saveDataUrlAsset, readAsset } from "./asset-store";
+import type { AssetUploadRequest } from "../types/assets";
+import type { IncomingMessage, ServerResponse } from "node:http";
 
 const port = Number(process.env.REALTIME_PORT ?? 3001);
 
@@ -23,6 +31,31 @@ const allowedOrigins = (
 
 function nowMs() {
   return Date.now();
+}
+
+function isAllowedOrigin(origin: string | undefined) {
+  if (!origin) {
+    return true;
+  }
+
+  return allowedOrigins.includes("*") || allowedOrigins.includes(origin);
+}
+
+function setCorsHeaders(request: IncomingMessage, response: ServerResponse) {
+  const origin = request.headers.origin;
+
+  if (allowedOrigins.includes("*")) {
+    response.setHeader("Access-Control-Allow-Origin", "*");
+  } else if (typeof origin === "string" && isAllowedOrigin(origin)) {
+    response.setHeader("Access-Control-Allow-Origin", origin);
+    response.setHeader("Vary", "Origin");
+  }
+
+  response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  response.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization",
+  );
 }
 
 const eventLoopDelay = monitorEventLoopDelay({
@@ -178,6 +211,14 @@ function scheduleTimerFinish(io: SocketIOServer) {
 }
 
 const httpServer = createServer((request, response) => {
+  setCorsHeaders(request, response);
+
+  if (request.method === "OPTIONS") {
+    response.writeHead(204);
+    response.end();
+    return;
+  }
+
   if (request.url === "/health") {
     const snapshot = getDisplayStateSnapshot();
 
@@ -220,6 +261,87 @@ const httpServer = createServer((request, response) => {
         2,
       ),
     );
+    return;
+  }
+
+  if (request.method === "GET" && request.url?.startsWith("/assets/")) {
+    const encodedFileName = request.url.slice("/assets/".length);
+    const fileName = decodeURIComponent(encodedFileName);
+
+    readAsset(fileName)
+      .then((asset) => {
+        response.writeHead(200, {
+          "Content-Type": asset.mimeType,
+          "Cache-Control": "public, max-age=31536000, immutable",
+        });
+        response.end(asset.data);
+      })
+      .catch(() => {
+        response.writeHead(404);
+        response.end();
+      });
+
+    return;
+  }
+
+  if (request.method === "POST" && request.url === "/assets") {
+    let body = "";
+
+    request.on("data", (chunk) => {
+      body += chunk;
+
+      // Basic protection against accidentally uploading huge files.
+      // Adjust if you need large background images later.
+      if (body.length > 15 * 1024 * 1024) {
+        request.destroy();
+      }
+    });
+
+    request.on("end", () => {
+      try {
+        const payload = JSON.parse(body) as AssetUploadRequest;
+
+        if (
+          typeof payload.fileName !== "string" ||
+          typeof payload.mimeType !== "string" ||
+          typeof payload.dataUrl !== "string"
+        ) {
+          response.writeHead(400, { "Content-Type": "application/json" });
+          response.end(
+            JSON.stringify({ error: "Invalid asset upload payload" }),
+          );
+          return;
+        }
+
+        saveDataUrlAsset({
+          fileName: payload.fileName,
+          mimeType: payload.mimeType,
+          dataUrl: payload.dataUrl,
+          prefix: payload.prefix ?? "asset",
+        })
+          .then((savedAsset) => {
+            response.writeHead(200, { "Content-Type": "application/json" });
+            response.end(
+              JSON.stringify({
+                assetUrl: savedAsset.assetUrl,
+                fileName: savedAsset.fileName,
+              }),
+            );
+          })
+          .catch((error) => {
+            response.writeHead(400, { "Content-Type": "application/json" });
+            response.end(
+              JSON.stringify({
+                error: error instanceof Error ? error.message : String(error),
+              }),
+            );
+          });
+      } catch {
+        response.writeHead(400, { "Content-Type": "application/json" });
+        response.end(JSON.stringify({ error: "Invalid JSON" }));
+      }
+    });
+
     return;
   }
 
@@ -502,6 +624,11 @@ async function startServer() {
     console.log("> CAuDri-Challenge realtime server ready");
     console.log(`> http://0.0.0.0:${port}`);
     console.log(`> allowed origins: ${allowedOrigins.join(", ")}`);
+    console.log(
+      "[env] REALTIME_CORS_ORIGIN =",
+      process.env.REALTIME_CORS_ORIGIN,
+    );
+    console.log("[env] allowedOrigins =", allowedOrigins);
   });
 }
 

@@ -7,6 +7,7 @@ services:
     working_dir: /workspace
     volumes:
       - .:/workspace:cached
+      - dashboard-data:/workspace/.data
       - node_modules:/workspace/node_modules
       - pnpm_store:/root/.local/share/pnpm/store
     ports:
@@ -21,3 +22,4 @@ services:
 volumes:
   node_modules:
   pnpm_store:
+  dashboard-data:
