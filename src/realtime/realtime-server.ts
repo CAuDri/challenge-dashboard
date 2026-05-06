@@ -3,6 +3,11 @@ import { monitorEventLoopDelay } from "node:perf_hooks";
 import { Server as SocketIOServer } from "socket.io";
 import { demoScreens } from "../config/demoScreens";
 import type { DisplayState } from "../types/display";
+import {
+  loadPersistedDashboardState,
+  savePersistedDashboardStateDebounced,
+  type PersistedDashboardState,
+} from "./state-store";
 
 const port = Number(process.env.REALTIME_PORT ?? 3001);
 
@@ -42,28 +47,32 @@ setInterval(() => {
 
 const initialNow = nowMs();
 
-const displayState: DisplayState = {
+const defaultPersistedDashboardState: PersistedDashboardState = {
   activeScreenId: "fallback",
   screens: demoScreens,
   teams: [],
   currentRun: {
     selectedTeamId: undefined,
-    selectedDisciplineId: undefined,
+    selectedDisciplineId: "freedrive",
     phase: "standby",
     preparationDurationMs: 30 * 1000,
     runDurationMs: 3 * 60 * 1000,
   },
+  autoEndRunWhenTimerFinished: false,
+};
+
+let displayState: DisplayState = {
+  ...defaultPersistedDashboardState,
   timer: {
     status: "stopped",
-    durationMs: 3 * 60 * 1000,
-    remainingMs: 3 * 60 * 1000,
+    durationMs: defaultPersistedDashboardState.currentRun.runDurationMs,
+    remainingMs: defaultPersistedDashboardState.currentRun.runDurationMs,
     updatedAtServerMs: initialNow,
     targetEndTimeServerMs: undefined,
     startedAtServerMs: undefined,
     pausedAtServerMs: undefined,
     finishedAtServerMs: undefined,
   },
-  autoEndRunWhenTimerFinished: false,
 };
 
 let timerFinishTimeout: NodeJS.Timeout | null = null;
@@ -133,6 +142,11 @@ function getDisplayStateSnapshot(): DisplayState {
 
 function broadcastDisplayState(io: SocketIOServer) {
   io.emit("display:state", getDisplayStateSnapshot());
+}
+
+function persistAndBroadcastDisplayState(io: SocketIOServer) {
+  savePersistedDashboardStateDebounced(displayState);
+  broadcastDisplayState(io);
 }
 
 function finishTimerIfExpired(io: SocketIOServer) {
@@ -240,39 +254,75 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("display:set-state", (payload: unknown) => {
+  socket.on("dashboard:update-state", (payload: unknown) => {
     if (typeof payload !== "object" || payload === null) {
       return;
     }
 
-    const candidate = payload as Partial<DisplayState>;
+    const patch = payload as Partial<PersistedDashboardState>;
 
-    if (
-      typeof candidate.activeScreenId !== "string" ||
-      !Array.isArray(candidate.screens) ||
-      !Array.isArray(candidate.teams) ||
-      typeof candidate.currentRun !== "object" ||
-      candidate.currentRun === null
-    ) {
-      return;
+    if (typeof patch.activeScreenId === "string") {
+      displayState.activeScreenId = patch.activeScreenId;
     }
 
-    displayState.activeScreenId = candidate.activeScreenId;
-    displayState.screens = candidate.screens;
-    displayState.teams = candidate.teams;
-    displayState.currentRun = candidate.currentRun;
+    if (Array.isArray(patch.screens)) {
+      displayState.screens = patch.screens;
+    }
 
-    if (typeof candidate.autoEndRunWhenTimerFinished === "boolean") {
+    if (Array.isArray(patch.teams)) {
+      displayState.teams = patch.teams;
+    }
+
+    if (typeof patch.currentRun === "object" && patch.currentRun !== null) {
+      displayState.currentRun = {
+        ...displayState.currentRun,
+        ...patch.currentRun,
+      };
+    }
+
+    if (typeof patch.autoEndRunWhenTimerFinished === "boolean") {
       displayState.autoEndRunWhenTimerFinished =
-        candidate.autoEndRunWhenTimerFinished;
+        patch.autoEndRunWhenTimerFinished;
     }
 
-    broadcastDisplayState(io);
+    persistAndBroadcastDisplayState(io);
 
-    console.log(
-      `[display] state updated: activeScreenId=${displayState.activeScreenId}, screens=${displayState.screens.length}, teams=${displayState.teams.length}, phase=${displayState.currentRun.phase}`,
-    );
+    console.log("[dashboard] state patch applied");
   });
+
+  // socket.on("display:set-state", (payload: unknown) => {
+  //   if (typeof payload !== "object" || payload === null) {
+  //     return;
+  //   }
+
+  //   const candidate = payload as Partial<DisplayState>;
+
+  //   if (
+  //     typeof candidate.activeScreenId !== "string" ||
+  //     !Array.isArray(candidate.screens) ||
+  //     !Array.isArray(candidate.teams) ||
+  //     typeof candidate.currentRun !== "object" ||
+  //     candidate.currentRun === null
+  //   ) {
+  //     return;
+  //   }
+
+  //   displayState.activeScreenId = candidate.activeScreenId;
+  //   displayState.screens = candidate.screens;
+  //   displayState.teams = candidate.teams;
+  //   displayState.currentRun = candidate.currentRun;
+
+  //   if (typeof candidate.autoEndRunWhenTimerFinished === "boolean") {
+  //     displayState.autoEndRunWhenTimerFinished =
+  //       candidate.autoEndRunWhenTimerFinished;
+  //   }
+
+  //   broadcastDisplayState(io);
+
+  //   console.log(
+  //     `[display] state updated: activeScreenId=${displayState.activeScreenId}, screens=${displayState.screens.length}, teams=${displayState.teams.length}, phase=${displayState.currentRun.phase}`,
+  //   );
+  // });
 
   socket.on("display:set-active-screen", (payload: { screenId?: unknown }) => {
     if (typeof payload.screenId !== "string") {
@@ -281,7 +331,7 @@ io.on("connection", (socket) => {
 
     displayState.activeScreenId = payload.screenId;
 
-    broadcastDisplayState(io);
+    persistAndBroadcastDisplayState(io);
 
     console.log(
       `[display] active screen changed: ${displayState.activeScreenId}`,
@@ -420,8 +470,42 @@ setInterval(() => {
   finishTimerIfExpired(io);
 }, 50);
 
-httpServer.listen(port, "0.0.0.0", () => {
-  console.log("> CAuDri-Challenge realtime server ready");
-  console.log(`> http://0.0.0.0:${port}`);
-  console.log(`> allowed origins: ${allowedOrigins.join(", ")}`);
+async function startServer() {
+  const persistedDashboardState = await loadPersistedDashboardState(
+    defaultPersistedDashboardState,
+  );
+
+  const startupNow = nowMs();
+
+  displayState = {
+    ...persistedDashboardState,
+
+    // Timer is intentionally reset on realtime-server restart.
+    timer: {
+      status: "stopped",
+      durationMs: persistedDashboardState.currentRun.runDurationMs,
+      remainingMs: persistedDashboardState.currentRun.runDurationMs,
+      updatedAtServerMs: startupNow,
+      targetEndTimeServerMs: undefined,
+      startedAtServerMs: undefined,
+      pausedAtServerMs: undefined,
+      finishedAtServerMs: undefined,
+    },
+
+    currentRun: {
+      ...persistedDashboardState.currentRun,
+      phase: "standby",
+    },
+  };
+
+  httpServer.listen(port, "0.0.0.0", () => {
+    console.log("> CAuDri-Challenge realtime server ready");
+    console.log(`> http://0.0.0.0:${port}`);
+    console.log(`> allowed origins: ${allowedOrigins.join(", ")}`);
+  });
+}
+
+startServer().catch((error) => {
+  console.error("[server] failed to start realtime server", error);
+  process.exit(1);
 });

@@ -1,27 +1,17 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
-import { demoScreens } from "@/config/demoScreens";
+import { createContext, useContext, type ReactNode } from "react";
 import { useDisplayStateSocket } from "@/hooks/useDisplayStateSocket";
 import { useServerCountdownTimer } from "@/hooks/useServerCountdownTimer";
-import type { ScreenDefinition, ScreenDraft } from "@/types/screen";
 import {
   disciplines,
   type DisciplineId,
   type Team,
   type TeamDraft,
+  type TeamScoreMap,
 } from "@/types/team";
-import {
-  nextRunPhaseOrder,
-  type CurrentRunState,
-  type RunPhase,
-} from "@/types/run";
+import type { ScreenDefinition, ScreenDraft } from "@/types/screen";
+import type { CurrentRunState, RunPhase } from "@/types/run";
 
 type CountdownTimerController = ReturnType<typeof useServerCountdownTimer>;
 
@@ -50,44 +40,38 @@ type AdminStateContextValue = {
   selectNextRunTeam: (direction: -1 | 1) => void;
   setCurrentRunDisciplineId: (disciplineId: DisciplineId | undefined) => void;
   setRunPhase: (phase: RunPhase) => void;
-  advanceRunPhase: () => void;
   setPreparationDurationMs: (durationMs: number) => void;
   setRunDurationMs: (durationMs: number) => void;
-  autoEndRunWhenTimerFinished: boolean;
-  setAutoEndRunWhenTimerFinished: (enabled: boolean) => void;
   startCurrentRunTimer: () => void;
   endCurrentRun: () => void;
+
+  autoEndRunWhenTimerFinished: boolean;
+  setAutoEndRunWhenTimerFinished: (enabled: boolean) => void;
 };
 
 const AdminStateContext = createContext<AdminStateContextValue | null>(null);
+
+function createEmptyScores(
+  participatingDisciplines: DisciplineId[],
+): TeamScoreMap {
+  return disciplines.reduce<TeamScoreMap>((scores, discipline) => {
+    if (participatingDisciplines.includes(discipline.id)) {
+      scores[discipline.id] = 0;
+    }
+
+    return scores;
+  }, {});
+}
 
 type AdminStateProviderProps = {
   children: ReactNode;
 };
 
-function createEmptyScores(participatingDisciplines: DisciplineId[]) {
-  return Object.fromEntries(
-    participatingDisciplines.map((disciplineId) => [disciplineId, 0]),
-  );
-}
-
-const initialTeams: Team[] = [
-  {
-    id: "demo-team-1",
-    name: "CAuDri Team",
-    logoScale: 1,
-    logoUrl: "/caudri_logo.svg",
-    logoFileName: "caudri_logo.svg",
-    teamColor: "#22d3ee",
-    participatingDisciplines: disciplines.map((discipline) => discipline.id),
-    scores: createEmptyScores(disciplines.map((discipline) => discipline.id)),
-  },
-];
-
 export function AdminStateProvider({ children }: AdminStateProviderProps) {
   const {
     displayState,
-    publishDisplayState,
+    updateDashboardState,
+    setActiveScreen,
     timerCommands,
     estimatedOneWayLatencyMs,
   } = useDisplayStateSocket();
@@ -98,74 +82,44 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
     estimatedOneWayLatencyMs,
   );
 
-  const [teams, setTeams] = useState<Team[]>(initialTeams);
-
-  const [screens, setScreens] = useState<ScreenDefinition[]>(demoScreens);
-  const [activeScreenId, setActiveScreenId] = useState("fallback");
-
-  const [currentRun, setCurrentRun] = useState<CurrentRunState>({
-    selectedTeamId: initialTeams[0]?.id,
-    selectedDisciplineId: "freedrive",
-    phase: "standby",
-    preparationDurationMs: 30 * 1000,
-    runDurationMs: 3 * 60 * 1000,
-  });
-
-  const [autoEndRunWhenTimerFinished, setAutoEndRunWhenTimerFinished] =
-    useState(true);
-
-  useEffect(() => {
-    publishDisplayState({
-      activeScreenId,
-      screens,
-      teams,
-      currentRun,
-      autoEndRunWhenTimerFinished,
-    });
-  }, [
-    activeScreenId,
-    screens,
-    teams,
-    currentRun,
-    autoEndRunWhenTimerFinished,
-    publishDisplayState,
-  ]);
+  const teams = displayState.teams;
+  const screens = displayState.screens;
+  const activeScreenId = displayState.activeScreenId;
+  const currentRun = displayState.currentRun;
+  const autoEndRunWhenTimerFinished = displayState.autoEndRunWhenTimerFinished;
 
   function addTeam(teamDraft: TeamDraft) {
     const teamId = crypto.randomUUID();
 
-    setTeams((currentTeams) => [
-      ...currentTeams,
-      {
-        id: teamId,
-        name: teamDraft.name,
-        logoUrl: teamDraft.logoUrl,
-        logoFileName: teamDraft.logoFileName,
-        logoScale: teamDraft.logoScale ?? 1,
-        teamColor: teamDraft.teamColor,
-        participatingDisciplines: teamDraft.participatingDisciplines,
-        scores: createEmptyScores(teamDraft.participatingDisciplines),
-      },
-    ]);
+    const nextTeam: Team = {
+      id: teamId,
+      name: teamDraft.name,
+      logoUrl: teamDraft.logoUrl,
+      logoFileName: teamDraft.logoFileName,
+      logoScale: teamDraft.logoScale ?? 1,
+      teamColor: teamDraft.teamColor ?? "#22d3ee",
+      participatingDisciplines: teamDraft.participatingDisciplines,
+      scores: createEmptyScores(teamDraft.participatingDisciplines),
+    };
+
+    updateDashboardState({
+      teams: [...teams, nextTeam],
+    });
   }
 
   function updateTeam(teamId: string, teamDraft: TeamDraft) {
-    setTeams((currentTeams) =>
-      currentTeams.map((team) => {
+    updateDashboardState({
+      teams: teams.map((team) => {
         if (team.id !== teamId) {
           return team;
         }
 
-        const nextScores = { ...team.scores };
+        const nextScores = createEmptyScores(
+          teamDraft.participatingDisciplines,
+        );
 
         for (const disciplineId of teamDraft.participatingDisciplines) {
-          nextScores[disciplineId] ??= 0;
-        }
-
-        for (const disciplineId of Object.keys(nextScores) as DisciplineId[]) {
-          if (!teamDraft.participatingDisciplines.includes(disciplineId)) {
-            delete nextScores[disciplineId];
-          }
+          nextScores[disciplineId] = team.scores[disciplineId] ?? 0;
         }
 
         return {
@@ -179,13 +133,20 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
           scores: nextScores,
         };
       }),
-    );
+    });
   }
 
   function deleteTeam(teamId: string) {
-    setTeams((currentTeams) =>
-      currentTeams.filter((team) => team.id !== teamId),
-    );
+    updateDashboardState({
+      teams: teams.filter((team) => team.id !== teamId),
+      currentRun:
+        currentRun.selectedTeamId === teamId
+          ? {
+              ...currentRun,
+              selectedTeamId: undefined,
+            }
+          : currentRun,
+    });
   }
 
   function updateTeamScore(
@@ -193,8 +154,8 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
     disciplineId: DisciplineId,
     score: number,
   ) {
-    setTeams((currentTeams) =>
-      currentTeams.map((team) =>
+    updateDashboardState({
+      teams: teams.map((team) =>
         team.id === teamId
           ? {
               ...team,
@@ -205,28 +166,27 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
             }
           : team,
       ),
-    );
+    });
   }
 
   function addScreen(screenDraft: ScreenDraft) {
-    const screenId = crypto.randomUUID();
+    const nextScreen: ScreenDefinition = {
+      id: crypto.randomUUID(),
+      name: screenDraft.name,
+      description: screenDraft.description,
+      type: screenDraft.type,
+      thumbnailLabel: screenDraft.thumbnailLabel,
+      config: screenDraft.config,
+    };
 
-    setScreens((currentScreens) => [
-      ...currentScreens,
-      {
-        id: screenId,
-        name: screenDraft.name,
-        description: screenDraft.description,
-        type: screenDraft.type,
-        thumbnailLabel: screenDraft.thumbnailLabel,
-        config: screenDraft.config,
-      },
-    ]);
+    updateDashboardState({
+      screens: [...screens, nextScreen],
+    });
   }
 
   function updateScreen(screenId: string, screenDraft: ScreenDraft) {
-    setScreens((currentScreens) =>
-      currentScreens.map((screen) =>
+    updateDashboardState({
+      screens: screens.map((screen) =>
         screen.id === screenId
           ? {
               ...screen,
@@ -238,59 +198,61 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
             }
           : screen,
       ),
-    );
-  }
-
-  function deleteScreen(screenId: string) {
-    setScreens((currentScreens) =>
-      currentScreens.filter((screen) => screen.id !== screenId),
-    );
-
-    setActiveScreenId((currentActiveScreenId) =>
-      currentActiveScreenId === screenId ? "fallback" : currentActiveScreenId,
-    );
-  }
-
-  function activateScreen(screenId: string) {
-    setActiveScreenId(screenId);
-  }
-
-  function setCurrentRunTeamId(teamId: string | undefined) {
-    setCurrentRun((currentRunState) => ({
-      ...currentRunState,
-      selectedTeamId: teamId,
-    }));
-  }
-
-  function selectNextRunTeam(direction: -1 | 1) {
-    setCurrentRun((currentRunState) => {
-      if (teams.length === 0) {
-        return {
-          ...currentRunState,
-          selectedTeamId: undefined,
-        };
-      }
-
-      const currentIndex = teams.findIndex(
-        (team) => team.id === currentRunState.selectedTeamId,
-      );
-
-      const safeCurrentIndex = currentIndex === -1 ? 0 : currentIndex;
-      const nextIndex =
-        (safeCurrentIndex + direction + teams.length) % teams.length;
-
-      return {
-        ...currentRunState,
-        selectedTeamId: teams[nextIndex].id,
-      };
     });
   }
 
+  function deleteScreen(screenId: string) {
+    const nextScreens = screens.filter((screen) => screen.id !== screenId);
+
+    const fallbackScreenId =
+      nextScreens.find((screen) => screen.id === "fallback")?.id ??
+      nextScreens[0]?.id ??
+      "fallback";
+
+    updateDashboardState({
+      screens: nextScreens,
+      activeScreenId:
+        activeScreenId === screenId ? fallbackScreenId : activeScreenId,
+    });
+  }
+
+  function activateScreen(screenId: string) {
+    setActiveScreen(screenId);
+  }
+
+  function setCurrentRunTeamId(teamId: string | undefined) {
+    updateDashboardState({
+      currentRun: {
+        ...currentRun,
+        selectedTeamId: teamId,
+      },
+    });
+  }
+
+  function selectNextRunTeam(direction: -1 | 1) {
+    if (teams.length === 0) {
+      setCurrentRunTeamId(undefined);
+      return;
+    }
+
+    const currentIndex = teams.findIndex(
+      (team) => team.id === currentRun.selectedTeamId,
+    );
+
+    const safeCurrentIndex = currentIndex === -1 ? 0 : currentIndex;
+    const nextIndex =
+      (safeCurrentIndex + direction + teams.length) % teams.length;
+
+    setCurrentRunTeamId(teams[nextIndex].id);
+  }
+
   function setCurrentRunDisciplineId(disciplineId: DisciplineId | undefined) {
-    setCurrentRun((currentRunState) => ({
-      ...currentRunState,
-      selectedDisciplineId: disciplineId,
-    }));
+    updateDashboardState({
+      currentRun: {
+        ...currentRun,
+        selectedDisciplineId: disciplineId,
+      },
+    });
   }
 
   function setRunPhase(phase: RunPhase) {
@@ -306,41 +268,40 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
       timer.setDurationMs(currentRun.runDurationMs);
     }
 
-    setCurrentRun((currentRunState) => ({
-      ...currentRunState,
-      phase,
-    }));
-  }
-
-  function advanceRunPhase() {
-    const currentIndex = nextRunPhaseOrder.indexOf(currentRun.phase);
-    const safeCurrentIndex = currentIndex === -1 ? 0 : currentIndex;
-    const nextPhase =
-      nextRunPhaseOrder[(safeCurrentIndex + 1) % nextRunPhaseOrder.length];
-
-    setRunPhase(nextPhase);
+    updateDashboardState({
+      currentRun: {
+        ...currentRun,
+        phase,
+      },
+    });
   }
 
   function setPreparationDurationMs(durationMs: number) {
-    setCurrentRun((currentRunState) => ({
-      ...currentRunState,
-      preparationDurationMs: Math.max(0, Math.round(durationMs)),
-    }));
+    updateDashboardState({
+      currentRun: {
+        ...currentRun,
+        preparationDurationMs: Math.max(0, Math.round(durationMs)),
+      },
+    });
   }
 
   function setRunDurationMs(durationMs: number) {
-    setCurrentRun((currentRunState) => ({
-      ...currentRunState,
-      runDurationMs: Math.max(0, Math.round(durationMs)),
-    }));
+    updateDashboardState({
+      currentRun: {
+        ...currentRun,
+        runDurationMs: Math.max(0, Math.round(durationMs)),
+      },
+    });
   }
 
   function startCurrentRunTimer() {
     if (currentRun.phase === "ready") {
-      setCurrentRun((currentRunState) => ({
-        ...currentRunState,
-        phase: "running",
-      }));
+      updateDashboardState({
+        currentRun: {
+          ...currentRun,
+          phase: "running",
+        },
+      });
     }
 
     timer.startTimer();
@@ -349,24 +310,19 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
   function endCurrentRun() {
     timer.finishTimer();
 
-    setCurrentRun((currentRunState) => ({
-      ...currentRunState,
-      phase: "finish",
-    }));
+    updateDashboardState({
+      currentRun: {
+        ...currentRun,
+        phase: "finish",
+      },
+    });
   }
 
-  useEffect(() => {
-    if (
-      autoEndRunWhenTimerFinished &&
-      currentRun.phase === "running" &&
-      timer.timer.status === "finished"
-    ) {
-      setCurrentRun((currentRunState) => ({
-        ...currentRunState,
-        phase: "finish",
-      }));
-    }
-  }, [autoEndRunWhenTimerFinished, currentRun.phase, timer.timer.status]);
+  function setAutoEndRunWhenTimerFinished(enabled: boolean) {
+    updateDashboardState({
+      autoEndRunWhenTimerFinished: enabled,
+    });
+  }
 
   return (
     <AdminStateContext.Provider
@@ -391,13 +347,13 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
         selectNextRunTeam,
         setCurrentRunDisciplineId,
         setRunPhase,
-        advanceRunPhase,
         setPreparationDurationMs,
         setRunDurationMs,
-        autoEndRunWhenTimerFinished,
-        setAutoEndRunWhenTimerFinished,
         startCurrentRunTimer,
         endCurrentRun,
+
+        autoEndRunWhenTimerFinished,
+        setAutoEndRunWhenTimerFinished,
       }}
     >
       {children}
@@ -408,7 +364,7 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
 export function useAdminState() {
   const context = useContext(AdminStateContext);
 
-  if (context === null) {
+  if (!context) {
     throw new Error("useAdminState must be used within AdminStateProvider");
   }
 

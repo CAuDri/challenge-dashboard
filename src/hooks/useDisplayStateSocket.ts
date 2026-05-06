@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { demoScreens } from "@/config/demoScreens";
 import { getSocketClient } from "@/lib/realtime/socketClient";
 import type { DisplayState } from "@/types/display";
+import type { PersistedDashboardState } from "@/types/persistence";
 
 type AdminDisplayStatePayload = Pick<
   DisplayState,
@@ -151,9 +152,30 @@ export function useDisplayStateSocket() {
     [],
   );
 
+  const updateDashboardState = useCallback(
+    (patch: Partial<PersistedDashboardState>) => {
+      const socket = getSocketClient();
+
+      socket.emit("dashboard:update-state", patch);
+
+      setDisplayState((currentState) => ({
+        ...currentState,
+        ...patch,
+        currentRun: patch.currentRun
+          ? {
+              ...currentState.currentRun,
+              ...patch.currentRun,
+            }
+          : currentState.currentRun,
+      }));
+    },
+    [],
+  );
+
   return {
     displayState,
     publishDisplayState,
+    updateDashboardState,
     setActiveScreen,
     timerCommands,
     estimatedOneWayLatencyMs,
