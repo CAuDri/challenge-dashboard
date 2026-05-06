@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { performance } from "node:perf_hooks";
+import { monitorEventLoopDelay } from "node:perf_hooks";
 import { Server as SocketIOServer } from "socket.io";
 import { demoScreens } from "../config/demoScreens";
 import type { DisplayState } from "../types/display";
@@ -12,7 +12,35 @@ const allowedOrigins = (
   .split(",")
   .map((origin) => origin.trim());
 
-const initialNow = performance.now();
+// function nowMs() {
+//   return Number(process.hrtime.bigint()) / 1_000_000;
+// }
+
+function nowMs() {
+  return Date.now();
+}
+
+const eventLoopDelay = monitorEventLoopDelay({
+  resolution: 20,
+});
+
+eventLoopDelay.enable();
+
+setInterval(() => {
+  const meanMs = eventLoopDelay.mean / 1_000_000;
+  const p99Ms = eventLoopDelay.percentile(99) / 1_000_000;
+  const maxMs = eventLoopDelay.max / 1_000_000;
+
+  console.log(
+    `[event-loop] mean=${meanMs.toFixed(2)}ms p99=${p99Ms.toFixed(
+      2,
+    )}ms max=${maxMs.toFixed(2)}ms`,
+  );
+
+  eventLoopDelay.reset();
+}, 5_000);
+
+const initialNow = nowMs();
 
 const displayState: DisplayState = {
   activeScreenId: "fallback",
@@ -59,14 +87,13 @@ function applyAutoFinishIfNeeded() {
   }
 }
 
-function getTimerSnapshot() {
+function getTimerSnapshotAt(now: number) {
   const timer = displayState.timer;
 
   if (timer.status !== "running" || timer.targetEndTimeServerMs === undefined) {
     return timer;
   }
 
-  const now = performance.now();
   const remainingMs = Math.max(0, timer.targetEndTimeServerMs - now);
 
   if (remainingMs > 0) {
@@ -91,6 +118,10 @@ function getTimerSnapshot() {
   applyAutoFinishIfNeeded();
 
   return displayState.timer;
+}
+
+function getTimerSnapshot() {
+  return getTimerSnapshotAt(nowMs());
 }
 
 function getDisplayStateSnapshot(): DisplayState {
@@ -125,7 +156,7 @@ function scheduleTimerFinish(io: SocketIOServer) {
     return;
   }
 
-  const delayMs = Math.max(0, timer.targetEndTimeServerMs - performance.now());
+  const delayMs = Math.max(0, timer.targetEndTimeServerMs - nowMs());
 
   timerFinishTimeout = setTimeout(() => {
     finishTimerIfExpired(io);
@@ -134,13 +165,46 @@ function scheduleTimerFinish(io: SocketIOServer) {
 
 const httpServer = createServer((request, response) => {
   if (request.url === "/health") {
+    const snapshot = getDisplayStateSnapshot();
+
     response.writeHead(200, { "Content-Type": "application/json" });
     response.end(
       JSON.stringify({
         ok: true,
         service: "caudri-dashboard-realtime",
-        timerStatus: displayState.timer.status,
+        timerStatus: snapshot.timer.status,
+        durationMs: snapshot.timer.durationMs,
+        remainingMs: snapshot.timer.remainingMs,
+        targetEndTimeServerMs: snapshot.timer.targetEndTimeServerMs,
+        updatedAtServerMs: snapshot.timer.updatedAtServerMs,
+        startedAtServerMs: snapshot.timer.startedAtServerMs,
+        pausedAtServerMs: snapshot.timer.pausedAtServerMs,
+        finishedAtServerMs: snapshot.timer.finishedAtServerMs,
+        phase: snapshot.currentRun.phase,
       }),
+    );
+    return;
+  }
+
+  if (request.url === "/timer-debug") {
+    const now = nowMs();
+    const snapshot = getDisplayStateSnapshot();
+
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(
+      JSON.stringify(
+        {
+          nowMs: now,
+          timer: snapshot.timer,
+          targetDeltaMs:
+            snapshot.timer.targetEndTimeServerMs !== undefined
+              ? snapshot.timer.targetEndTimeServerMs - now
+              : null,
+          rawStoredTimer: displayState.timer,
+        },
+        null,
+        2,
+      ),
     );
     return;
   }
@@ -230,7 +294,7 @@ io.on("connection", (socket) => {
     }
 
     const durationMs = Math.max(0, Math.round(payload.durationMs));
-    const now = performance.now();
+    const now = nowMs();
 
     clearTimerFinishTimeout();
 
@@ -251,8 +315,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("timer:start", () => {
-    const now = performance.now();
-    const timer = getTimerSnapshot();
+    const now = nowMs();
+    const timer = getTimerSnapshotAt(now);
 
     if (timer.status === "running" || timer.remainingMs <= 0) {
       return;
@@ -277,8 +341,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("timer:pause", () => {
-    const now = performance.now();
-    const timer = getTimerSnapshot();
+    const now = nowMs();
+    const timer = getTimerSnapshotAt(now);
 
     if (timer.status !== "running") {
       return;
@@ -301,7 +365,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("timer:reset", () => {
-    const now = performance.now();
+    const now = nowMs();
 
     clearTimerFinishTimeout();
 
@@ -318,12 +382,12 @@ io.on("connection", (socket) => {
 
     broadcastDisplayState(io);
 
-    console.log(`[timer] reset`);
+    console.log("[timer] reset");
   });
 
   socket.on("timer:finish-now", () => {
-    const now = performance.now();
-    const timer = getTimerSnapshot();
+    const now = nowMs();
+    const timer = getTimerSnapshotAt(now);
 
     clearTimerFinishTimeout();
 
@@ -354,7 +418,7 @@ io.on("connection", (socket) => {
 
 setInterval(() => {
   finishTimerIfExpired(io);
-}, 1_000);
+}, 50);
 
 httpServer.listen(port, "0.0.0.0", () => {
   console.log("> CAuDri-Challenge realtime server ready");
