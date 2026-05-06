@@ -40,6 +40,7 @@ export function PdfPagePreview({
   );
   const [documentRevision, setDocumentRevision] = useState(0);
   const [hasRenderedPage, setHasRenderedPage] = useState(false);
+  const devicePixelRatioRef = useRef(1);
   const handleDocumentLoadSuccess = useEffectEvent((numPages: number) => {
     onDocumentLoadSuccess?.(numPages);
   });
@@ -48,6 +49,13 @@ export function PdfPagePreview({
       onPageLoadSuccess?.(page);
     },
   );
+
+  useEffect(() => {
+    devicePixelRatioRef.current =
+      typeof window === "undefined"
+        ? 1
+        : Math.max(1, Math.min(window.devicePixelRatio || 1, 2.5));
+  }, []);
 
   useEffect(() => {
     if (!fileUrl) {
@@ -149,8 +157,12 @@ export function PdfPagePreview({
         const horizontalScale = width ? width / viewport.width : Number.POSITIVE_INFINITY;
         const verticalScale = height ? height / viewport.height : Number.POSITIVE_INFINITY;
         const scale = Math.min(horizontalScale, verticalScale);
+        const baseScale = Number.isFinite(scale) ? scale : 1;
+        const cssViewport = pdfPage.getViewport({
+          scale: baseScale,
+        });
         const renderViewport = pdfPage.getViewport({
-          scale: Number.isFinite(scale) ? scale : 1,
+          scale: baseScale * devicePixelRatioRef.current,
         });
         const canvas = canvasRef.current;
 
@@ -166,8 +178,8 @@ export function PdfPagePreview({
 
         canvas.width = Math.ceil(renderViewport.width);
         canvas.height = Math.ceil(renderViewport.height);
-        canvas.style.width = `${renderViewport.width}px`;
-        canvas.style.height = `${renderViewport.height}px`;
+        canvas.style.width = `${cssViewport.width}px`;
+        canvas.style.height = `${cssViewport.height}px`;
 
         activeRenderTask = pdfPage.render({
           canvas,

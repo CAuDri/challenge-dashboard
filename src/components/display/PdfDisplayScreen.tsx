@@ -155,9 +155,9 @@ export function PdfDisplayScreen({ screen }: PdfDisplayScreenProps) {
     );
   }
 
-  const horizontalPadding = Math.max(24, containerSize.width * 0.04);
-  const verticalPadding = Math.max(24, containerSize.height * 0.04);
-  const infoBarHeight = 56;
+  const horizontalPadding = Math.max(12, containerSize.width * 0.018);
+  const verticalPadding = Math.max(12, containerSize.height * 0.018);
+  const infoBarHeight = 40;
   const availableWidth = Math.max(0, containerSize.width - horizontalPadding * 2);
   const availableHeight = Math.max(
     0,
@@ -171,12 +171,13 @@ export function PdfDisplayScreen({ screen }: PdfDisplayScreenProps) {
     <main className="flex h-full w-full flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 text-white">
       <div
         ref={containerRef}
-        className="flex min-h-0 flex-1 items-center justify-center px-[clamp(1.5rem,4vw,3.5rem)] py-[clamp(1.25rem,3vw,2.5rem)]"
+        className="flex min-h-0 flex-1 items-center justify-center px-[clamp(0.75rem,1.8vw,1.5rem)] py-[clamp(0.75rem,1.8vw,1.5rem)]"
       >
         <PdfPagePreview
           fileUrl={pdfUrl}
           pageNumber={currentPage}
           width={fittedWidth > 0 ? fittedWidth : undefined}
+          height={availableHeight > 0 ? availableHeight : undefined}
           className="flex h-full w-full items-center justify-center"
           pageClassName="shadow-2xl"
           loadingLabel="Loading presentation..."
@@ -191,7 +192,7 @@ export function PdfDisplayScreen({ screen }: PdfDisplayScreenProps) {
         />
       </div>
 
-      <footer className="flex h-14 shrink-0 items-center justify-between border-t border-white/10 px-6 text-sm text-slate-300">
+      <footer className="flex h-10 shrink-0 items-center justify-between border-t border-white/10 px-4 text-xs text-slate-300">
         <span className="truncate">{screen.name}</span>
         <span className="font-mono text-slate-400">
           {currentPage} / {pageCount}
