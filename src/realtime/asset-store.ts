@@ -50,6 +50,26 @@ function getAssetPath(fileName: string) {
   };
 }
 
+export function getAssetFileNameFromUrl(assetUrl: string | undefined) {
+  if (!assetUrl) {
+    return undefined;
+  }
+
+  try {
+    const url = new URL(assetUrl, publicAssetBaseUrl);
+    const marker = "/assets/";
+    const markerIndex = url.pathname.indexOf(marker);
+
+    if (markerIndex === -1) {
+      return undefined;
+    }
+
+    return decodeURIComponent(url.pathname.slice(markerIndex + marker.length));
+  } catch {
+    return undefined;
+  }
+}
+
 function getExtension(fileName: string, mimeType: string) {
   const mimeExtension = allowedMimeTypes.get(mimeType);
 
@@ -143,4 +163,11 @@ export async function readAsset(fileName: string) {
     data,
     mimeType,
   };
+}
+
+export async function restoreAsset(fileName: string, data: Buffer) {
+  const asset = getAssetPath(fileName);
+
+  await mkdir(assetDirectory, { recursive: true });
+  await writeFile(asset.absolutePath, data);
 }

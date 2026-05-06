@@ -8,13 +8,21 @@ import { Server as SocketIOServer } from "socket.io";
 import { demoScreens } from "../config/demoScreens";
 import type { DisplayState } from "../types/display";
 import {
+  clearPendingPersistedDashboardStateSave,
+  createPersistedStateFromDisplayState,
   loadPersistedDashboardState,
+  mergePersistedStateWithDefaults,
+  savePersistedDashboardState,
   savePersistedDashboardStateDebounced,
 } from "./state-store";
 import type { PersistedDashboardState } from "@/types/persistence";
 import { saveDataUrlAsset, readAsset } from "./asset-store";
 import type { AssetUploadRequest } from "../types/assets";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import {
+  createDashboardBackupZip,
+  restoreDashboardBackupZip,
+} from "./dashboard-backup";
 
 const port = Number(process.env.REALTIME_PORT ?? 3001);
 
@@ -152,6 +160,34 @@ function getDisplayStateSnapshot(): DisplayState {
   };
 }
 
+function createStoppedTimer(durationMs: number) {
+  const now = nowMs();
+
+  return {
+    status: "stopped" as const,
+    durationMs,
+    remainingMs: durationMs,
+    updatedAtServerMs: now,
+    targetEndTimeServerMs: undefined,
+    startedAtServerMs: undefined,
+    pausedAtServerMs: undefined,
+    finishedAtServerMs: undefined,
+  };
+}
+
+function replaceDashboardState(persistedState: PersistedDashboardState) {
+  clearTimerFinishTimeout();
+
+  displayState = {
+    ...persistedState,
+    timer: createStoppedTimer(persistedState.currentRun.runDurationMs),
+    currentRun: {
+      ...persistedState.currentRun,
+      phase: "standby",
+    },
+  };
+}
+
 function broadcastDisplayState(io: SocketIOServer) {
   io.emit("display:state", getDisplayStateSnapshot());
 }
@@ -159,6 +195,40 @@ function broadcastDisplayState(io: SocketIOServer) {
 function persistAndBroadcastDisplayState(io: SocketIOServer) {
   savePersistedDashboardStateDebounced(displayState);
   broadcastDisplayState(io);
+}
+
+async function persistImmediatelyAndBroadcastDisplayState(io: SocketIOServer) {
+  clearPendingPersistedDashboardStateSave();
+  await savePersistedDashboardState(displayState);
+  broadcastDisplayState(io);
+}
+
+function readRequestBody(
+  request: IncomingMessage,
+  maxBytes: number,
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+
+    request.on("data", (chunk: Buffer) => {
+      size += chunk.length;
+
+      if (size > maxBytes) {
+        reject(new Error("Request body is too large"));
+        request.destroy();
+        return;
+      }
+
+      chunks.push(chunk);
+    });
+
+    request.on("end", () => {
+      resolve(Buffer.concat(chunks));
+    });
+
+    request.on("error", reject);
+  });
 }
 
 function finishTimerIfExpired(io: SocketIOServer) {
@@ -243,6 +313,81 @@ const httpServer = createServer((request, response) => {
     return;
   }
 
+  if (request.method === "GET" && request.url === "/dashboard/export") {
+    createDashboardBackupZip(
+      createPersistedStateFromDisplayState(getDisplayStateSnapshot()),
+    )
+      .then((backup) => {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+
+        response.writeHead(200, {
+          "Content-Type": "application/zip",
+          "Content-Disposition": `attachment; filename="caudri-dashboard-${timestamp}.zip"`,
+          "Cache-Control": "no-store",
+        });
+        response.end(backup);
+      })
+      .catch((error) => {
+        response.writeHead(500, { "Content-Type": "application/json" });
+        response.end(
+          JSON.stringify({
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        );
+      });
+
+    return;
+  }
+
+  if (request.method === "POST" && request.url === "/dashboard/import") {
+    readRequestBody(request, 50 * 1024 * 1024)
+      .then(restoreDashboardBackupZip)
+      .then((backupState) => {
+        replaceDashboardState(
+          mergePersistedStateWithDefaults(
+            backupState,
+            defaultPersistedDashboardState,
+          ),
+        );
+
+        return persistImmediatelyAndBroadcastDisplayState(io);
+      })
+      .then(() => {
+        response.writeHead(200, { "Content-Type": "application/json" });
+        response.end(JSON.stringify({ ok: true }));
+      })
+      .catch((error) => {
+        response.writeHead(400, { "Content-Type": "application/json" });
+        response.end(
+          JSON.stringify({
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        );
+      });
+
+    return;
+  }
+
+  if (request.method === "POST" && request.url === "/dashboard/reset") {
+    replaceDashboardState(defaultPersistedDashboardState);
+
+    persistImmediatelyAndBroadcastDisplayState(io)
+      .then(() => {
+        response.writeHead(200, { "Content-Type": "application/json" });
+        response.end(JSON.stringify({ ok: true }));
+      })
+      .catch((error) => {
+        response.writeHead(500, { "Content-Type": "application/json" });
+        response.end(
+          JSON.stringify({
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        );
+      });
+
+    return;
+  }
+
   if (request.method === "GET" && request.url?.startsWith("/assets/")) {
     const encodedFileName = request.url.slice("/assets/".length);
     const fileName = decodeURIComponent(encodedFileName);
@@ -264,62 +409,62 @@ const httpServer = createServer((request, response) => {
   }
 
   if (request.method === "POST" && request.url === "/assets") {
-    let body = "";
+    readRequestBody(request, 15 * 1024 * 1024)
+      .then((body) => {
+        try {
+          const payload = JSON.parse(
+            body.toString("utf8"),
+          ) as AssetUploadRequest;
 
-    request.on("data", (chunk) => {
-      body += chunk;
-
-      // Basic protection against accidentally uploading huge files.
-      // Adjust if you need large background images later.
-      if (body.length > 15 * 1024 * 1024) {
-        request.destroy();
-      }
-    });
-
-    request.on("end", () => {
-      try {
-        const payload = JSON.parse(body) as AssetUploadRequest;
-
-        if (
-          typeof payload.fileName !== "string" ||
-          typeof payload.mimeType !== "string" ||
-          typeof payload.dataUrl !== "string"
-        ) {
-          response.writeHead(400, { "Content-Type": "application/json" });
-          response.end(
-            JSON.stringify({ error: "Invalid asset upload payload" }),
-          );
-          return;
-        }
-
-        saveDataUrlAsset({
-          fileName: payload.fileName,
-          mimeType: payload.mimeType,
-          dataUrl: payload.dataUrl,
-          prefix: payload.prefix ?? "asset",
-        })
-          .then((savedAsset) => {
-            response.writeHead(200, { "Content-Type": "application/json" });
-            response.end(
-              JSON.stringify({
-                assetUrl: savedAsset.assetUrl,
-                fileName: savedAsset.fileName,
-              }),
-            );
-          })
-          .catch((error) => {
+          if (
+            typeof payload.fileName !== "string" ||
+            typeof payload.mimeType !== "string" ||
+            typeof payload.dataUrl !== "string"
+          ) {
             response.writeHead(400, { "Content-Type": "application/json" });
             response.end(
-              JSON.stringify({
-                error: error instanceof Error ? error.message : String(error),
-              }),
+              JSON.stringify({ error: "Invalid asset upload payload" }),
             );
-          });
-      } catch {
+            return;
+          }
+
+          saveDataUrlAsset({
+            fileName: payload.fileName,
+            mimeType: payload.mimeType,
+            dataUrl: payload.dataUrl,
+            prefix: payload.prefix ?? "asset",
+          })
+            .then((savedAsset) => {
+              response.writeHead(200, { "Content-Type": "application/json" });
+              response.end(
+                JSON.stringify({
+                  assetUrl: savedAsset.assetUrl,
+                  fileName: savedAsset.fileName,
+                }),
+              );
+            })
+            .catch((error) => {
+              response.writeHead(400, { "Content-Type": "application/json" });
+              response.end(
+                JSON.stringify({
+                  error:
+                    error instanceof Error ? error.message : String(error),
+                }),
+              );
+            });
+        } catch {
+          response.writeHead(400, { "Content-Type": "application/json" });
+          response.end(JSON.stringify({ error: "Invalid JSON" }));
+        }
+      })
+      .catch((error) => {
         response.writeHead(400, { "Content-Type": "application/json" });
-        response.end(JSON.stringify({ error: "Invalid JSON" }));
-      }
-    });
+        response.end(
+          JSON.stringify({
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        );
+      });
 
     return;
   }
@@ -583,14 +728,8 @@ async function startServer() {
 
     // Timer is intentionally reset on realtime-server restart.
     timer: {
-      status: "stopped",
-      durationMs: persistedDashboardState.currentRun.runDurationMs,
-      remainingMs: persistedDashboardState.currentRun.runDurationMs,
+      ...createStoppedTimer(persistedDashboardState.currentRun.runDurationMs),
       updatedAtServerMs: startupNow,
-      targetEndTimeServerMs: undefined,
-      startedAtServerMs: undefined,
-      pausedAtServerMs: undefined,
-      finishedAtServerMs: undefined,
     },
 
     currentRun: {

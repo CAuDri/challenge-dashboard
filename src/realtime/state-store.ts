@@ -9,7 +9,7 @@ const stateFilePath = resolve(
 
 let saveTimeout: NodeJS.Timeout | null = null;
 
-function createPersistedStateFromDisplayState(
+export function createPersistedStateFromDisplayState(
   displayState: DisplayState,
 ): PersistedDashboardState {
   return {
@@ -21,7 +21,7 @@ function createPersistedStateFromDisplayState(
   };
 }
 
-function mergePersistedStateWithDefaults(
+export function mergePersistedStateWithDefaults(
   persistedState: Partial<PersistedDashboardState>,
   defaultState: PersistedDashboardState,
 ): PersistedDashboardState {
@@ -96,6 +96,13 @@ export async function savePersistedDashboardState(
     JSON.stringify(persistedState, null, 2),
     "utf8",
   );
+}
+
+export function clearPendingPersistedDashboardStateSave() {
+  if (saveTimeout !== null) {
+    clearTimeout(saveTimeout);
+    saveTimeout = null;
+  }
 }
 
 export function savePersistedDashboardStateDebounced(
