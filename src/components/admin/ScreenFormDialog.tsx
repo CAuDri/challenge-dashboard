@@ -23,18 +23,36 @@ type ScreenFormDialogProps = {
   open: boolean;
   mode: "create" | "edit";
   screen?: ScreenDefinition;
+  fixedType?: ScreenType;
   onOpenChange: (open: boolean) => void;
   onSubmit: (screenDraft: ScreenDraft) => void;
 };
 
-function createDefaultDraft(): ScreenDraft {
+function createDefaultDraft(type: ScreenType = "image"): ScreenDraft {
   return {
     name: "",
     description: "",
-    type: "image",
-    config: {
-      image: {},
-    },
+    type,
+    config:
+      type === "image"
+        ? {
+            image: {},
+          }
+        : type === "pdf"
+          ? {
+              pdf: {
+                previewPage: 1,
+              },
+            }
+          : type === "camera"
+            ? {
+                camera: createDefaultCameraConfig(),
+              }
+            : type === "timer"
+              ? {
+                  timer: createDefaultTimerConfig(),
+                }
+              : undefined,
   };
 }
 
@@ -71,12 +89,13 @@ export function ScreenFormDialog({
   open,
   mode,
   screen,
+  fixedType,
   onOpenChange,
   onSubmit,
 }: ScreenFormDialogProps) {
   const initialDraft = useMemo<ScreenDraft>(() => {
     if (!screen) {
-      return createDefaultDraft();
+      return createDefaultDraft(fixedType ?? "image");
     }
 
     return {
@@ -85,7 +104,7 @@ export function ScreenFormDialog({
       type: screen.type,
       config: screen.config,
     };
-  }, [screen]);
+  }, [fixedType, screen]);
 
   const [draft, setDraft] = useState<ScreenDraft>(initialDraft);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -110,6 +129,7 @@ export function ScreenFormDialog({
   }, [initialDraft, open]);
 
   const canSubmit = draft.name.trim().length > 0;
+  const showTypeSelection = mode === "create" && fixedType === undefined;
 
   function handleTypeChange(type: ScreenType) {
     setDraft((currentDraft) => ({
@@ -282,45 +302,47 @@ export function ScreenFormDialog({
             />
           </label>
 
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-              Screen Type
-            </span>
+          {showTypeSelection && (
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                Screen Type
+              </span>
 
-            <div className="mt-2 grid gap-3 sm:grid-cols-2">
-              {screenTypes.map((screenType) => {
-                const checked = draft.type === screenType.id;
+              <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                {screenTypes.map((screenType) => {
+                  const checked = draft.type === screenType.id;
 
-                return (
-                  <label
-                    key={screenType.id}
-                    className={`flex cursor-pointer rounded-2xl border p-4 transition ${
-                      checked
-                        ? "border-cyan-400/70 bg-cyan-400/10 text-cyan-100"
-                        : "border-slate-800 bg-slate-900 text-slate-400 hover:border-cyan-400/40"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="screen-type"
-                      checked={checked}
-                      onChange={() => handleTypeChange(screenType.id)}
-                      className="mr-3 mt-1 h-4 w-4 accent-cyan-400"
-                    />
+                  return (
+                    <label
+                      key={screenType.id}
+                      className={`flex cursor-pointer rounded-2xl border p-4 transition ${
+                        checked
+                          ? "border-cyan-400/70 bg-cyan-400/10 text-cyan-100"
+                          : "border-slate-800 bg-slate-900 text-slate-400 hover:border-cyan-400/40"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="screen-type"
+                        checked={checked}
+                        onChange={() => handleTypeChange(screenType.id)}
+                        className="mr-3 mt-1 h-4 w-4 accent-cyan-400"
+                      />
 
-                    <span>
-                      <span className="block font-semibold text-slate-100">
-                        {screenType.name}
+                      <span>
+                        <span className="block font-semibold text-slate-100">
+                          {screenType.name}
+                        </span>
+                        <span className="mt-1 block text-sm leading-5 text-slate-500">
+                          {screenType.description}
+                        </span>
                       </span>
-                      <span className="mt-1 block text-sm leading-5 text-slate-500">
-                        {screenType.description}
-                      </span>
-                    </span>
-                  </label>
-                );
-              })}
+                    </label>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {draft.type === "image" && (
             <div>

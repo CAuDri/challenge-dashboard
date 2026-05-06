@@ -56,22 +56,6 @@ function sortScreensForSection(screens: ScreenDefinition[]) {
   });
 }
 
-function getScreenTypeCounts(screens: ScreenDefinition[]) {
-  return screens.reduce<Record<ScreenType, number>>(
-    (counts, screen) => ({
-      ...counts,
-      [screen.type]: counts[screen.type] + 1,
-    }),
-    {
-      image: 0,
-      timer: 0,
-      scoreboard: 0,
-      pdf: 0,
-      camera: 0,
-    },
-  );
-}
-
 export function ScreenSelectionPanel() {
   const {
     screens,
@@ -89,18 +73,28 @@ export function ScreenSelectionPanel() {
   const [screenBeingEdited, setScreenBeingEdited] = useState<
     ScreenDefinition | undefined
   >();
+  const [screenTypeForCreate, setScreenTypeForCreate] = useState<
+    ScreenType | undefined
+  >();
 
   const dialogMode = screenBeingEdited ? "edit" : "create";
   const groupedScreens = groupScreensByType(screens);
-  const screenTypeCounts = getScreenTypeCounts(screens);
 
   function handleAddScreenClick() {
     setScreenBeingEdited(undefined);
+    setScreenTypeForCreate(undefined);
+    setDialogOpen(true);
+  }
+
+  function handleAddScreenForType(screenType: ScreenType) {
+    setScreenBeingEdited(undefined);
+    setScreenTypeForCreate(screenType);
     setDialogOpen(true);
   }
 
   function handleEditScreen(screen: ScreenDefinition) {
     setScreenBeingEdited(screen);
+    setScreenTypeForCreate(undefined);
     setDialogOpen(true);
   }
 
@@ -118,6 +112,7 @@ export function ScreenSelectionPanel() {
 
     if (!open) {
       setScreenBeingEdited(undefined);
+      setScreenTypeForCreate(undefined);
     }
   }
 
@@ -165,10 +160,14 @@ export function ScreenSelectionPanel() {
                   </div>
                 </div>
 
-                <p className="shrink-0 rounded-full border border-slate-800 bg-slate-950 px-3 py-1 font-[family-name:var(--font-rajdhani)] text-sm font-bold uppercase tracking-[0.22em] text-slate-500">
-                  {screenTypeCounts[group.id]}{" "}
-                  {screenTypeCounts[group.id] === 1 ? "Screen" : "Screens"}
-                </p>
+                <button
+                  type="button"
+                  onClick={() => handleAddScreenForType(group.id)}
+                  className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-3 py-2 font-semibold text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-400/20"
+                >
+                  <Plus className="size-4" />
+                  Add {group.id === "pdf" ? "PDF" : group.name}
+                </button>
               </div>
 
               <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
@@ -196,6 +195,7 @@ export function ScreenSelectionPanel() {
         open={dialogOpen}
         mode={dialogMode}
         screen={screenBeingEdited}
+        fixedType={screenBeingEdited?.type ?? screenTypeForCreate}
         onOpenChange={handleDialogOpenChange}
         onSubmit={handleSubmitScreen}
       />
