@@ -20,6 +20,38 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## LAN Deployment
+
+For local-network production use, the recommended setup is:
+
+- `web` service on internal port `3000`
+- `realtime` service on internal port `3001`
+- `caddy` reverse proxy on port `80`
+
+The repo includes a production stack in `docker-compose.prod.yml` and a proxy config in `docker/Caddyfile`.
+
+Start it with:
+
+```bash
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+Then open:
+
+- `http://<host-ip>/admin`
+- `http://<host-ip>/display`
+
+When a DNS record exists on the router, the same setup can be reached as:
+
+- `http://caudri-dashboard/admin`
+- `http://caudri-dashboard/display`
+
+Notes:
+
+- No public `NEXT_PUBLIC_REALTIME_URL` is required for this setup.
+- In development, the frontend still talks to the realtime server on the same host at port `3001`.
+- Uploaded assets are stored in the Docker volume `dashboard-data`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

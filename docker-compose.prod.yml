@@ -1,0 +1,43 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker/prod.Dockerfile
+    container_name: caudri-dashboard-web
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      INTERNAL_REALTIME_URL: http://realtime:3001
+    command: pnpm start:web
+    depends_on:
+      - realtime
+
+  realtime:
+    build:
+      context: .
+      dockerfile: docker/prod.Dockerfile
+    container_name: caudri-dashboard-realtime
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      REALTIME_PORT: "3001"
+      REALTIME_CORS_ORIGIN: "*"
+      DASHBOARD_STATE_FILE: /app/.data/dashboard-state.json
+      DASHBOARD_ASSET_DIR: /app/.data/assets
+    command: pnpm start:realtime
+    volumes:
+      - dashboard-data:/app/.data
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caudri-dashboard-proxy
+    depends_on:
+      - web
+      - realtime
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+
+volumes:
+  dashboard-data:

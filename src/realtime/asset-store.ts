@@ -11,8 +11,7 @@ const assetDirectory = resolve(
   process.env.DASHBOARD_ASSET_DIR ?? ".data/assets",
 );
 
-const publicAssetBaseUrl =
-  process.env.NEXT_PUBLIC_REALTIME_URL ?? "http://localhost:3001";
+const publicAssetBaseUrl = process.env.PUBLIC_DASHBOARD_URL ?? "http://localhost";
 
 const allowedMimeTypes = new Map<string, string>([
   ["image/png", ".png"],
@@ -139,7 +138,7 @@ export async function saveDataUrlAsset({
 
   return {
     fileName: storedFileName,
-    assetUrl: `${publicAssetBaseUrl}/assets/${storedFileName}`,
+    assetUrl: `/assets/${storedFileName}`,
     absolutePath,
   };
 }

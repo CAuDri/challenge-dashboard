@@ -1,13 +1,10 @@
 import type { AssetUploadRequest, AssetUploadResponse } from "@/types/assets";
-
-function getRealtimeUrl() {
-  return process.env.NEXT_PUBLIC_REALTIME_URL ?? "http://localhost:3001";
-}
+import { getRealtimeHttpUrl } from "@/lib/realtime/url";
 
 export async function uploadAsset(
   payload: AssetUploadRequest,
 ): Promise<AssetUploadResponse> {
-  const realtimeUrl = getRealtimeUrl();
+  const realtimeUrl = getRealtimeHttpUrl();
 
   let response: Response;
 

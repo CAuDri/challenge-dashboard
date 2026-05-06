@@ -1,6 +1,4 @@
-function getRealtimeUrl() {
-  return process.env.NEXT_PUBLIC_REALTIME_URL ?? "http://localhost:3001";
-}
+import { getRealtimeHttpUrl } from "@/lib/realtime/url";
 
 function getBackupFileName() {
   return `caudri-dashboard-${new Date()
@@ -9,7 +7,7 @@ function getBackupFileName() {
 }
 
 export async function exportDashboardBackup() {
-  const response = await fetch(`${getRealtimeUrl()}/dashboard/export`);
+  const response = await fetch(`${getRealtimeHttpUrl()}/dashboard/export`);
 
   if (!response.ok) {
     throw new Error(`Export failed: ${response.status}`);
@@ -28,7 +26,7 @@ export async function exportDashboardBackup() {
 }
 
 export async function importDashboardBackup(file: File) {
-  const response = await fetch(`${getRealtimeUrl()}/dashboard/import`, {
+  const response = await fetch(`${getRealtimeHttpUrl()}/dashboard/import`, {
     method: "POST",
     headers: {
       "Content-Type": "application/zip",
@@ -43,7 +41,7 @@ export async function importDashboardBackup(file: File) {
 }
 
 export async function resetDashboardState() {
-  const response = await fetch(`${getRealtimeUrl()}/dashboard/reset`, {
+  const response = await fetch(`${getRealtimeHttpUrl()}/dashboard/reset`, {
     method: "POST",
   });
 

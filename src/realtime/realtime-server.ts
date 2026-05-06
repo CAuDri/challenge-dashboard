@@ -27,7 +27,7 @@ import {
 const port = Number(process.env.REALTIME_PORT ?? 3001);
 
 const allowedOrigins = (
-  process.env.REALTIME_CORS_ORIGIN ?? "http://localhost:3000"
+  process.env.REALTIME_CORS_ORIGIN ?? "*"
 )
   .split(",")
   .map((origin) => origin.trim());
