@@ -4,10 +4,9 @@ Competition dashboard for the Cognitive Autonomous Driving Challenge.
 
 The dashboard is used by the commission to manage teams, scores, run phases,
 timers, presentation screens, result displays, live camera feeds, and the
-physical traffic light used during competition runs. It is designed for local
-network operation at the event venue, with an admin console for operators and
-one or more fullscreen display clients for projectors, monitors, or livestream
-outputs.
+traffic light (Start Scheduling System) used during competition runs.
+
+It features a web-based admin console for configuration and control, and a fullscreen display client for presentation and live information during the event.
 
 ## Features
 
@@ -54,18 +53,40 @@ outputs.
 - Diagnostics dialog with server, timer, run, traffic light, display, and state
   information.
 
-## Screenshots
-
-Screenshots will be added here.
-
 ## Local Development
 
-### Requirements
+The recommended development setup is the included VS Code Dev Container. It
+provides the expected Node.js/pnpm environment and keeps local machine setup
+minimal.
 
-- Node.js
-- pnpm
+### Recommended: Dev Container
 
-Install dependencies:
+Requirements:
+
+- Docker
+- Visual Studio Code
+- VS Code Dev Containers extension
+
+Open the repository in VS Code and choose:
+
+```text
+Dev Containers: Reopen in Container
+```
+
+The container installs dependencies automatically through the devcontainer
+configuration. Once the container is ready, start the dashboard and realtime
+server:
+
+```bash
+pnpm dev
+```
+
+The repository also includes VS Code Action Buttons for starting and stopping
+the dashboard from the editor.
+
+### Alternative: Local Node.js
+
+If you do not use the Dev Container, install Node.js and pnpm locally, then run:
 
 ```bash
 pnpm install
@@ -76,6 +97,8 @@ Start the dashboard and realtime server:
 ```bash
 pnpm dev
 ```
+
+### Open the Dashboard
 
 Open:
 
@@ -89,8 +112,11 @@ The development command starts:
 
 ### Useful Scripts
 
+These commands can be run inside the Dev Container or in a local Node.js setup:
+
 ```bash
 pnpm dev               # Start web app and realtime server
+pnpm dev:stop          # Stop the development servers
 pnpm dev:web           # Start only the Next.js development server
 pnpm dev:realtime      # Start only the realtime server
 pnpm dev:traffic-light # Start the local traffic light mock server
