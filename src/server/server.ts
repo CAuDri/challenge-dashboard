@@ -34,6 +34,24 @@ const displayState: DisplayState = {
     targetEndTimeServerMs: undefined,
   },
   autoEndRunWhenTimerFinished: false,
+  trafficLight: {
+    config: {
+      transport: "http",
+      host: "caudri-traffic-light",
+      autoConnect: true,
+      syncWithRunControl: true,
+      enabled: true,
+      pollIntervalMs: 2_000,
+    },
+    runtime: {
+      connectionStatus: "idle",
+      reportedColor: "unknown",
+      expectedColor: undefined,
+      temperatureC: undefined,
+      lastSeenAtServerMs: undefined,
+      lastError: undefined,
+    },
+  },
 };
 
 function getTimerSnapshot() {

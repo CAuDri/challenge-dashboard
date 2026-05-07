@@ -18,6 +18,7 @@ export function createPersistedStateFromDisplayState(
     teams: displayState.teams,
     currentRun: displayState.currentRun,
     autoEndRunWhenTimerFinished: displayState.autoEndRunWhenTimerFinished,
+    trafficLight: displayState.trafficLight.config,
   };
 }
 
@@ -54,6 +55,14 @@ export function mergePersistedStateWithDefaults(
       typeof persistedState.autoEndRunWhenTimerFinished === "boolean"
         ? persistedState.autoEndRunWhenTimerFinished
         : defaultState.autoEndRunWhenTimerFinished,
+
+    trafficLight: {
+      ...defaultState.trafficLight,
+      ...(typeof persistedState.trafficLight === "object" &&
+      persistedState.trafficLight !== null
+        ? persistedState.trafficLight
+        : {}),
+    },
   };
 }
 

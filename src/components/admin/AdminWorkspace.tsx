@@ -4,6 +4,7 @@ import { ScreenSelectionPanel } from "@/components/admin/ScreenSelectionPanel";
 import { TeamScorePanel } from "@/components/admin/TeamScorePanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RunControlPanel } from "@/components/admin/RunControlPanel";
+import { TrafficLightPanel } from "@/components/admin/TrafficLightPanel";
 
 const tabTriggerClassName =
   "h-14 rounded-b-none rounded-t-2xl border border-b-0 border-slate-800 bg-slate-950 px-8 font-[family-name:var(--font-rajdhani)] text-xl font-bold uppercase tracking-wide text-slate-500 shadow-none transition " +
@@ -28,6 +29,10 @@ export function AdminWorkspace() {
 
           <TabsTrigger value="run-control" className={tabTriggerClassName}>
             Run Control
+          </TabsTrigger>
+
+          <TabsTrigger value="traffic-light" className={tabTriggerClassName}>
+            Traffic Light
           </TabsTrigger>
         </TabsList>
 
@@ -55,6 +60,13 @@ export function AdminWorkspace() {
         className="m-0 min-h-0 flex-1 data-[state=inactive]:hidden"
       >
         <RunControlPanel />
+      </TabsContent>
+
+      <TabsContent
+        value="traffic-light"
+        className="m-0 min-h-0 flex-1 data-[state=inactive]:hidden"
+      >
+        <TrafficLightPanel />
       </TabsContent>
     </Tabs>
   );

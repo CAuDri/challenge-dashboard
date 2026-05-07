@@ -15,6 +15,11 @@ import {
 } from "@/types/team";
 import type { ScreenDefinition, ScreenDraft } from "@/types/screen";
 import type { CurrentRunState, RunPhase } from "@/types/run";
+import type {
+  TrafficLightColor,
+  TrafficLightConfigPatch,
+  TrafficLightState,
+} from "@/types/traffic-light";
 
 type CountdownTimerController = ReturnType<typeof useServerCountdownTimer>;
 
@@ -53,6 +58,11 @@ type AdminStateContextValue = {
 
   autoEndRunWhenTimerFinished: boolean;
   setAutoEndRunWhenTimerFinished: (enabled: boolean) => void;
+
+  trafficLight: TrafficLightState;
+  updateTrafficLightConfig: (patch: TrafficLightConfigPatch) => void;
+  connectTrafficLight: () => void;
+  commandTrafficLight: (color: TrafficLightColor) => void;
 };
 
 const AdminStateContext = createContext<AdminStateContextValue | null>(null);
@@ -81,6 +91,9 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
     timerCommands,
     estimatedOneWayLatencyMs,
     connectionStatus,
+    updateTrafficLightConfig,
+    connectTrafficLight,
+    commandTrafficLight,
   } = useDisplayStateSocket();
 
   const timer = useServerCountdownTimer(
@@ -94,6 +107,7 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
   const activeScreenId = displayState.activeScreenId;
   const currentRun = displayState.currentRun;
   const autoEndRunWhenTimerFinished = displayState.autoEndRunWhenTimerFinished;
+  const trafficLight = displayState.trafficLight;
 
   function addTeam(teamDraft: TeamDraft) {
     const teamId = crypto.randomUUID();
@@ -362,6 +376,11 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
 
         autoEndRunWhenTimerFinished,
         setAutoEndRunWhenTimerFinished,
+
+        trafficLight,
+        updateTrafficLightConfig,
+        connectTrafficLight,
+        commandTrafficLight,
       }}
     >
       {children}

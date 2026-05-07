@@ -67,7 +67,12 @@ function RealtimeConnectionHint({
 
 export function AdminHeader() {
   const importInputRef = useRef<HTMLInputElement>(null);
-  const { connectionStatus } = useAdminState();
+  const { connectionStatus, trafficLight } = useAdminState();
+
+  const showTrafficLightWarning =
+    (trafficLight.config.autoConnect ||
+      trafficLight.config.syncWithRunControl) &&
+    trafficLight.runtime.connectionStatus === "disconnected";
 
   async function handleExportBackup() {
     try {
@@ -215,6 +220,12 @@ export function AdminHeader() {
           </div>
 
           <RealtimeConnectionHint status={connectionStatus} />
+
+          {showTrafficLightWarning && (
+            <div className="rounded-full border border-rose-400/40 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-100">
+              Traffic light disconnected
+            </div>
+          )}
 
           <input
             ref={importInputRef}

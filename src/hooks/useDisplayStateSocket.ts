@@ -5,6 +5,10 @@ import { demoScreens } from "@/config/demoScreens";
 import { getSocketClient } from "@/lib/realtime/socketClient";
 import type { DisplayState } from "@/types/display";
 import type { PersistedDashboardState } from "@/types/persistence";
+import type {
+  TrafficLightColor,
+  TrafficLightConfigPatch,
+} from "@/types/traffic-light";
 
 type AdminDisplayStatePayload = Pick<
   DisplayState,
@@ -42,6 +46,24 @@ const initialDisplayState: DisplayState = {
     finishedAtServerMs: undefined,
   },
   autoEndRunWhenTimerFinished: false,
+  trafficLight: {
+    config: {
+      transport: "http",
+      host: "caudri-traffic-light",
+      autoConnect: true,
+      syncWithRunControl: true,
+      enabled: true,
+      pollIntervalMs: 2_000,
+    },
+    runtime: {
+      connectionStatus: "idle",
+      reportedColor: "unknown",
+      expectedColor: undefined,
+      temperatureC: undefined,
+      lastSeenAtServerMs: undefined,
+      lastError: undefined,
+    },
+  },
 };
 
 export function useDisplayStateSocket() {
@@ -213,10 +235,63 @@ export function useDisplayStateSocket() {
               ...patch.currentRun,
             }
           : currentState.currentRun,
+        trafficLight: patch.trafficLight
+          ? {
+              ...currentState.trafficLight,
+              config: {
+                ...currentState.trafficLight.config,
+                ...patch.trafficLight,
+              },
+            }
+          : currentState.trafficLight,
       }));
     },
     [],
   );
+
+  const updateTrafficLightConfig = useCallback(
+    (patch: TrafficLightConfigPatch) => {
+      updateDashboardState({
+        trafficLight: {
+          ...displayState.trafficLight.config,
+          ...patch,
+        },
+      });
+    },
+    [displayState.trafficLight.config, updateDashboardState],
+  );
+
+  const connectTrafficLight = useCallback(() => {
+    getSocketClient().emit("traffic-light:connect");
+
+    setDisplayState((currentState) => ({
+      ...currentState,
+      trafficLight: {
+        ...currentState.trafficLight,
+        runtime: {
+          ...currentState.trafficLight.runtime,
+          connectionStatus: "connecting",
+          lastError: undefined,
+        },
+      },
+    }));
+  }, []);
+
+  const commandTrafficLight = useCallback((color: TrafficLightColor) => {
+    getSocketClient().emit("traffic-light:command", { color });
+
+    setDisplayState((currentState) => ({
+      ...currentState,
+      trafficLight: {
+        ...currentState.trafficLight,
+        runtime: {
+          ...currentState.trafficLight.runtime,
+          expectedColor: color,
+          lastError: undefined,
+        },
+      },
+    }));
+  }, []);
 
   return {
     displayState,
@@ -226,5 +301,8 @@ export function useDisplayStateSocket() {
     setActiveScreen,
     timerCommands,
     estimatedOneWayLatencyMs,
+    updateTrafficLightConfig,
+    connectTrafficLight,
+    commandTrafficLight,
   };
 }

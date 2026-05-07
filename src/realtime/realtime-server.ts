@@ -23,6 +23,16 @@ import {
   createDashboardBackupZip,
   restoreDashboardBackupZip,
 } from "./dashboard-backup";
+import {
+  getTrafficLightColorForRunPhase,
+  type TrafficLightColor,
+  type TrafficLightConfig,
+  type TrafficLightRuntime,
+} from "../types/traffic-light";
+import {
+  createTrafficLightClient,
+  normalizeTrafficLightHost,
+} from "./traffic-light-client";
 
 const port = Number(process.env.REALTIME_PORT ?? 3001);
 
@@ -75,6 +85,26 @@ function getSocketIoCorsOrigin() {
 
 const initialNow = nowMs();
 
+const defaultTrafficLightConfig: TrafficLightConfig = {
+  transport: "http",
+  host: "caudri-traffic-light",
+  autoConnect: true,
+  syncWithRunControl: true,
+  enabled: true,
+  pollIntervalMs: 2_000,
+};
+
+function createDefaultTrafficLightRuntime(): TrafficLightRuntime {
+  return {
+    connectionStatus: "idle",
+    reportedColor: "unknown",
+    expectedColor: undefined,
+    temperatureC: undefined,
+    lastSeenAtServerMs: undefined,
+    lastError: undefined,
+  };
+}
+
 const defaultPersistedDashboardState: PersistedDashboardState = {
   activeScreenId: "fallback",
   screens: demoScreens,
@@ -87,6 +117,7 @@ const defaultPersistedDashboardState: PersistedDashboardState = {
     runDurationMs: 3 * 60 * 1000,
   },
   autoEndRunWhenTimerFinished: false,
+  trafficLight: defaultTrafficLightConfig,
 };
 
 let displayState: DisplayState = {
@@ -101,9 +132,16 @@ let displayState: DisplayState = {
     pausedAtServerMs: undefined,
     finishedAtServerMs: undefined,
   },
+  trafficLight: {
+    config: defaultTrafficLightConfig,
+    runtime: createDefaultTrafficLightRuntime(),
+  },
 };
 
 let timerFinishTimeout: NodeJS.Timeout | null = null;
+let trafficLightPollTimeout: NodeJS.Timeout | null = null;
+let trafficLightRequestSequence = 0;
+let trafficLightSyncArmed = false;
 
 function clearTimerFinishTimeout() {
   if (timerFinishTimeout !== null) {
@@ -183,8 +221,169 @@ function createStoppedTimer(durationMs: number) {
   };
 }
 
+function setTrafficLightRuntimePatch(patch: Partial<TrafficLightRuntime>) {
+  displayState.trafficLight = {
+    ...displayState.trafficLight,
+    runtime: {
+      ...displayState.trafficLight.runtime,
+      ...patch,
+    },
+  };
+}
+
+async function readTrafficLightTelemetry() {
+  const requestSequence = ++trafficLightRequestSequence;
+  const telemetry = await createTrafficLightClient(
+    displayState.trafficLight.config,
+  ).readTelemetry();
+
+  if (requestSequence !== trafficLightRequestSequence) {
+    return;
+  }
+
+  setTrafficLightRuntimePatch({
+    connectionStatus: "connected",
+    reportedColor: telemetry.reportedColor,
+    temperatureC: telemetry.temperatureC,
+    lastSeenAtServerMs: nowMs(),
+    lastError: undefined,
+  });
+}
+
+async function sendTrafficLightCommand(color: TrafficLightColor) {
+  const requestSequence = ++trafficLightRequestSequence;
+  setTrafficLightRuntimePatch({
+    connectionStatus:
+      displayState.trafficLight.runtime.connectionStatus === "connected"
+        ? "connected"
+        : "connecting",
+    expectedColor: color,
+    lastError: undefined,
+  });
+
+  const telemetry = await createTrafficLightClient(
+    displayState.trafficLight.config,
+  ).sendCommand(color);
+
+  if (requestSequence !== trafficLightRequestSequence) {
+    return;
+  }
+
+  setTrafficLightRuntimePatch({
+    connectionStatus: "connected",
+    reportedColor: telemetry.reportedColor,
+    temperatureC: telemetry.temperatureC,
+    lastSeenAtServerMs: nowMs(),
+    lastError: undefined,
+  });
+}
+
+function handleTrafficLightError(error: unknown) {
+  setTrafficLightRuntimePatch({
+    connectionStatus: "disconnected",
+    lastError: error instanceof Error ? error.message : String(error),
+  });
+}
+
+function shouldTrafficLightPoll() {
+  return (
+    displayState.trafficLight.config.autoConnect ||
+    displayState.trafficLight.config.syncWithRunControl
+  );
+}
+
+function clearTrafficLightPoll() {
+  if (trafficLightPollTimeout !== null) {
+    clearTimeout(trafficLightPollTimeout);
+    trafficLightPollTimeout = null;
+  }
+}
+
+function scheduleTrafficLightPoll(io: SocketIOServer, immediate = false) {
+  clearTrafficLightPoll();
+
+  if (!shouldTrafficLightPoll()) {
+    return;
+  }
+
+  const delayMs = immediate
+    ? 0
+    : Math.max(500, displayState.trafficLight.config.pollIntervalMs);
+
+  trafficLightPollTimeout = setTimeout(() => {
+    pollTrafficLight(io).catch((error) => {
+      handleTrafficLightError(error);
+      broadcastDisplayState(io);
+      scheduleTrafficLightPoll(io);
+    });
+  }, delayMs);
+}
+
+async function pollTrafficLight(io: SocketIOServer) {
+  if (!shouldTrafficLightPoll()) {
+    return;
+  }
+
+  await readTrafficLightTelemetry();
+
+  const { config, runtime } = displayState.trafficLight;
+  const syncColor =
+    config.enabled && config.syncWithRunControl
+      ? getTrafficLightColorForRunPhase(displayState.currentRun.phase)
+      : undefined;
+
+  if (!config.enabled && runtime.reportedColor !== "off") {
+    await sendTrafficLightCommand("off");
+  } else if (
+    trafficLightSyncArmed &&
+    syncColor &&
+    runtime.reportedColor !== "unknown" &&
+    runtime.reportedColor !== syncColor
+  ) {
+    await sendTrafficLightCommand(syncColor);
+  }
+
+  broadcastDisplayState(io);
+  scheduleTrafficLightPoll(io);
+}
+
+function syncTrafficLightToCurrentRunPhase(io: SocketIOServer) {
+  trafficLightSyncArmed = true;
+
+  const { config } = displayState.trafficLight;
+
+  if (!config.enabled) {
+    sendTrafficLightCommand("off")
+      .catch(handleTrafficLightError)
+      .finally(() => {
+        broadcastDisplayState(io);
+        scheduleTrafficLightPoll(io, true);
+      });
+    return;
+  }
+
+  if (!config.syncWithRunControl) {
+    return;
+  }
+
+  const nextColor = getTrafficLightColorForRunPhase(displayState.currentRun.phase);
+
+  if (!nextColor) {
+    return;
+  }
+
+  sendTrafficLightCommand(nextColor)
+    .catch(handleTrafficLightError)
+    .finally(() => {
+      broadcastDisplayState(io);
+      scheduleTrafficLightPoll(io, true);
+    });
+}
+
 function replaceDashboardState(persistedState: PersistedDashboardState) {
   clearTimerFinishTimeout();
+  clearTrafficLightPoll();
+  trafficLightSyncArmed = false;
 
   displayState = {
     ...persistedState,
@@ -192,6 +391,10 @@ function replaceDashboardState(persistedState: PersistedDashboardState) {
     currentRun: {
       ...persistedState.currentRun,
       phase: "standby",
+    },
+    trafficLight: {
+      config: persistedState.trafficLight,
+      runtime: createDefaultTrafficLightRuntime(),
     },
   };
 }
@@ -514,6 +717,7 @@ io.on("connection", (socket) => {
     }
 
     const patch = payload as Partial<PersistedDashboardState>;
+    const previousRunPhase = displayState.currentRun.phase;
 
     if (typeof patch.activeScreenId === "string") {
       displayState.activeScreenId = patch.activeScreenId;
@@ -539,7 +743,53 @@ io.on("connection", (socket) => {
         patch.autoEndRunWhenTimerFinished;
     }
 
+    if (typeof patch.trafficLight === "object" && patch.trafficLight !== null) {
+      const previousEnabled = displayState.trafficLight.config.enabled;
+      const previousSyncWithRunControl =
+        displayState.trafficLight.config.syncWithRunControl;
+
+      displayState.trafficLight = {
+        ...displayState.trafficLight,
+        config: {
+          ...displayState.trafficLight.config,
+          ...patch.trafficLight,
+          transport: "http",
+          host:
+            typeof patch.trafficLight.host === "string"
+              ? normalizeTrafficLightHost(patch.trafficLight.host)
+              : displayState.trafficLight.config.host,
+          pollIntervalMs:
+            typeof patch.trafficLight.pollIntervalMs === "number"
+              ? Math.max(500, Math.round(patch.trafficLight.pollIntervalMs))
+              : displayState.trafficLight.config.pollIntervalMs,
+        },
+      };
+
+      if (
+        previousEnabled &&
+        displayState.trafficLight.config.enabled === false
+      ) {
+        syncTrafficLightToCurrentRunPhase(io);
+      }
+
+      if (
+        !previousSyncWithRunControl &&
+        displayState.trafficLight.config.syncWithRunControl
+      ) {
+        syncTrafficLightToCurrentRunPhase(io);
+      }
+
+      scheduleTrafficLightPoll(io, true);
+    }
+
     persistAndBroadcastDisplayState(io);
+
+    if (
+      patch.currentRun?.phase !== undefined &&
+      previousRunPhase !== displayState.currentRun.phase
+    ) {
+      syncTrafficLightToCurrentRunPhase(io);
+    }
 
     console.log("[dashboard] state patch applied");
   });
@@ -590,6 +840,50 @@ io.on("connection", (socket) => {
     console.log(
       `[display] active screen changed: ${displayState.activeScreenId}`,
     );
+  });
+
+  socket.on(
+    "traffic-light:command",
+    (payload: { color?: unknown; force?: unknown }) => {
+      const color = payload.color;
+
+      if (
+        color !== "red" &&
+        color !== "yellow" &&
+        color !== "green" &&
+        color !== "off"
+      ) {
+        return;
+      }
+
+      if (
+        displayState.trafficLight.config.syncWithRunControl &&
+        payload.force !== true
+      ) {
+        return;
+      }
+
+      sendTrafficLightCommand(color)
+        .catch(handleTrafficLightError)
+        .finally(() => {
+          broadcastDisplayState(io);
+          scheduleTrafficLightPoll(io, true);
+        });
+    },
+  );
+
+  socket.on("traffic-light:connect", () => {
+    setTrafficLightRuntimePatch({
+      connectionStatus: "connecting",
+      lastError: undefined,
+    });
+
+    readTrafficLightTelemetry()
+      .catch(handleTrafficLightError)
+      .finally(() => {
+        broadcastDisplayState(io);
+        scheduleTrafficLightPoll(io, true);
+      });
   });
 
   socket.on("timer:set-duration", (payload: { durationMs?: unknown }) => {
@@ -744,6 +1038,10 @@ async function startServer() {
       ...persistedDashboardState.currentRun,
       phase: "standby",
     },
+    trafficLight: {
+      config: persistedDashboardState.trafficLight,
+      runtime: createDefaultTrafficLightRuntime(),
+    },
   };
 
   httpServer.listen(port, "0.0.0.0", () => {
@@ -756,6 +1054,8 @@ async function startServer() {
     );
     console.log("[env] allowedOrigins =", allowedOrigins);
   });
+
+  scheduleTrafficLightPoll(io, true);
 }
 
 startServer().catch((error) => {
