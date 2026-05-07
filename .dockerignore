@@ -1,4 +1,6 @@
 .data
+.env*
+!.env.example
 .git
 .gitignore
 .next
