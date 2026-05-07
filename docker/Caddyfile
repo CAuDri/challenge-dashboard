@@ -1,21 +1,25 @@
 :80 {
-  handle /socket.io {
-    reverse_proxy realtime:3001
-  }
+	handle /socket.io {
+		reverse_proxy realtime:3001
+	}
 
-  handle /socket.io/* {
-    reverse_proxy realtime:3001
-  }
+	handle /socket.io/* {
+		reverse_proxy realtime:3001
+	}
 
-  handle /assets/* {
-    reverse_proxy realtime:3001
-  }
+	handle /assets/* {
+		reverse_proxy realtime:3001
+	}
 
-  handle /dashboard/* {
-    reverse_proxy realtime:3001
-  }
+	handle /assets {
+		reverse_proxy realtime:3001
+	}
 
-  handle {
-    reverse_proxy web:3000
-  }
+	handle /dashboard/* {
+		reverse_proxy realtime:3001
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
 }

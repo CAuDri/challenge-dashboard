@@ -14,6 +14,9 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
+ARG INTERNAL_REALTIME_URL=http://127.0.0.1:3001
+ENV INTERNAL_REALTIME_URL=$INTERNAL_REALTIME_URL
+
 RUN NODE_ENV=production pnpm build
 
 EXPOSE 3000

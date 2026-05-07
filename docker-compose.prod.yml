@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: docker/prod.Dockerfile
+      args:
+        INTERNAL_REALTIME_URL: http://realtime:3001
     container_name: caudri-dashboard-web
     environment:
       NODE_ENV: production
