@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
+import { createClientId } from "@/lib/createClientId";
 import {
   useDisplayStateSocket,
   type RealtimeConnectionStatus,
@@ -127,7 +128,7 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
   const diagnostics = displayState.diagnostics;
 
   function addTeam(teamDraft: TeamDraft) {
-    const teamId = crypto.randomUUID();
+    const teamId = createClientId();
 
     const nextTeam: Team = {
       id: teamId,
@@ -231,7 +232,7 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
 
   function addScreen(screenDraft: ScreenDraft) {
     const nextScreen: ScreenDefinition = {
-      id: crypto.randomUUID(),
+      id: createClientId(),
       name: screenDraft.name,
       description: screenDraft.description,
       type: screenDraft.type,

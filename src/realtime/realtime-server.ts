@@ -891,7 +891,6 @@ io.on("connection", (socket) => {
     });
 
     void resolveDisplayClientHostname(candidate.id, ipAddress, io);
-    broadcastDisplayState(io);
   });
 
   socket.on("display-control:set-main-display", (payload: unknown) => {

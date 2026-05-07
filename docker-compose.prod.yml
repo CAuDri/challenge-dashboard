@@ -24,6 +24,8 @@ services:
       REALTIME_CORS_ORIGIN: "*"
       DASHBOARD_STATE_FILE: /app/.data/dashboard-state.json
       DASHBOARD_ASSET_DIR: /app/.data/assets
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: pnpm start:realtime
     volumes:
       - dashboard-data:/app/.data

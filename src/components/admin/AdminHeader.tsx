@@ -30,47 +30,130 @@ import { useAdminState } from "@/providers/AdminStateProvider";
 import type { RealtimeConnectionStatus } from "@/hooks/useDisplayStateSocket";
 import { DisplayHealthDialog } from "@/components/admin/DisplayHealthDialog";
 import { DiagnosticsDialog } from "@/components/admin/DiagnosticsDialog";
+import type { TrafficLightState } from "@/types/traffic-light";
 
-function RealtimeConnectionHint({
-  status,
+type HeaderStatusTone = "emerald" | "amber" | "rose" | "slate";
+
+function HeaderStatusRow({
+  label,
+  value,
+  tone,
 }: {
-  status: RealtimeConnectionStatus;
+  label: string;
+  value: string;
+  tone: HeaderStatusTone;
 }) {
+  const toneConfig = {
+    emerald: "bg-emerald-300 text-emerald-100",
+    amber: "bg-amber-200 text-amber-100",
+    rose: "bg-rose-300 text-rose-100",
+    slate: "bg-slate-500 text-slate-400",
+  } satisfies Record<HeaderStatusTone, string>;
+
+  const [dotClassName, textClassName] = toneConfig[tone].split(" ");
+
+  return (
+    <div
+      className={`flex items-center justify-between gap-5 font-[family-name:var(--font-rajdhani)] text-[0.7rem] font-bold uppercase leading-none tracking-[0.16em] ${textClassName}`}
+    >
+      <span className="flex items-center gap-2 text-slate-500">
+        <span
+          className={`size-1.5 rounded-full shadow-[0_0_8px_currentColor] ${dotClassName}`}
+        />
+        {label}
+      </span>
+      <span>{value}</span>
+    </div>
+  );
+}
+
+function getServerStatus(status: RealtimeConnectionStatus) {
   const statusConfig = {
     connected: {
-      label: "Server: Connected",
-      className: "text-emerald-200",
-      dotClassName: "bg-emerald-300",
+      value: "Connected",
+      tone: "emerald",
     },
     reconnecting: {
-      label: "Server: Reconnecting...",
-      className: "text-amber-100",
-      dotClassName: "bg-amber-200",
+      value: "Reconnecting",
+      tone: "amber",
     },
     disconnected: {
-      label: "Server: Disconnected",
-      className: "text-red-200",
-      dotClassName: "bg-red-300",
+      value: "Disconnected",
+      tone: "rose",
     },
   } satisfies Record<
     RealtimeConnectionStatus,
     {
-      label: string;
-      className: string;
-      dotClassName: string;
+      value: string;
+      tone: HeaderStatusTone;
     }
   >;
 
-  const config = statusConfig[status];
+  return statusConfig[status];
+}
+
+function getTrafficLightStatus(trafficLight: TrafficLightState) {
+  const isTrafficLightActive =
+    trafficLight.config.enabled &&
+    (trafficLight.config.autoConnect ||
+      trafficLight.config.syncWithRunControl);
+
+  if (!isTrafficLightActive) {
+    return {
+      value: "Disabled",
+      tone: "slate" as const,
+    };
+  }
+
+  switch (trafficLight.runtime.connectionStatus) {
+    case "connected":
+      return {
+        value: "Connected",
+        tone: "emerald" as const,
+      };
+
+    case "connecting":
+      return {
+        value: "Connecting",
+        tone: "amber" as const,
+      };
+
+    case "disconnected":
+      return {
+        value: "Disconnected",
+        tone: "rose" as const,
+      };
+
+    case "idle":
+      return {
+        value: "Idle",
+        tone: "slate" as const,
+      };
+  }
+}
+
+function HeaderStatusPanel({
+  connectionStatus,
+  trafficLight,
+}: {
+  connectionStatus: RealtimeConnectionStatus;
+  trafficLight: TrafficLightState;
+}) {
+  const serverStatus = getServerStatus(connectionStatus);
+  const trafficLightStatus = getTrafficLightStatus(trafficLight);
 
   return (
-    <div
-      className={`flex items-center gap-2 pr-1 font-[family-name:var(--font-rajdhani)] text-xs font-bold uppercase tracking-[0.18em] ${config.className}`}
-    >
-      <span
-        className={`size-2 rounded-full shadow-[0_0_10px_currentColor] ${config.dotClassName}`}
+    <div className="grid w-full gap-2 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 shadow-inner shadow-black/20">
+      <HeaderStatusRow
+        label="Server"
+        value={serverStatus.value}
+        tone={serverStatus.tone}
       />
-      <span>{config.label}</span>
+      <HeaderStatusRow
+        label="Traffic Light"
+        value={trafficLightStatus.value}
+        tone={trafficLightStatus.tone}
+      />
     </div>
   );
 }
@@ -80,11 +163,6 @@ export function AdminHeader() {
   const { connectionStatus, trafficLight } = useAdminState();
   const [displayHealthOpen, setDisplayHealthOpen] = useState(false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
-
-  const showTrafficLightWarning =
-    (trafficLight.config.autoConnect ||
-      trafficLight.config.syncWithRunControl) &&
-    trafficLight.runtime.connectionStatus === "disconnected";
 
   async function handleExportBackup() {
     try {
@@ -155,13 +233,13 @@ export function AdminHeader() {
             CAuDri-Challenge
           </p>
 
-          <h1 className="mt-2 text-6xl font-bold leading-none">
+          <h1 className="mb-[-0.16em] mt-2 text-6xl font-bold leading-none">
             Competition Dashboard
           </h1>
         </div>
 
-        <div className="ml-auto flex flex-col items-end gap-2">
-          <div className="flex items-center gap-3">
+        <div className="ml-auto flex flex-col items-stretch gap-2">
+          <div className="flex items-center justify-end gap-3">
             <Button
               asChild
               className="h-13 gap-2.5 border-cyan-400/30 bg-cyan-400/10 px-5 font-[family-name:var(--font-rajdhani)] text-lg font-bold uppercase tracking-wide text-cyan-100 hover:bg-cyan-400/20"
@@ -255,13 +333,10 @@ export function AdminHeader() {
             </DropdownMenu>
           </div>
 
-          <RealtimeConnectionHint status={connectionStatus} />
-
-          {showTrafficLightWarning && (
-            <div className="rounded-full border border-rose-400/40 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-100">
-              Traffic light disconnected
-            </div>
-          )}
+          <HeaderStatusPanel
+            connectionStatus={connectionStatus}
+            trafficLight={trafficLight}
+          />
 
           <input
             ref={importInputRef}

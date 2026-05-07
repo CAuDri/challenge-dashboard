@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { demoScreens } from "@/config/demoScreens";
+import { createClientId } from "@/lib/createClientId";
 import { getSocketClient } from "@/lib/realtime/socketClient";
+import { scheduleMicrotask } from "@/lib/scheduleMicrotask";
 import type { DisplayState } from "@/types/display";
 import type { PersistedDashboardState } from "@/types/persistence";
 import type {
@@ -88,16 +90,21 @@ function getOrCreateDisplayClientId() {
   }
 
   const storageKey = "caudri-display-client-id";
-  const existingId = window.localStorage.getItem(storageKey);
 
-  if (existingId) {
-    return existingId;
+  try {
+    const existingId = window.localStorage.getItem(storageKey);
+
+    if (existingId) {
+      return existingId;
+    }
+
+    const nextId = createClientId();
+    window.localStorage.setItem(storageKey, nextId);
+
+    return nextId;
+  } catch {
+    return createClientId();
   }
-
-  const nextId = crypto.randomUUID();
-  window.localStorage.setItem(storageKey, nextId);
-
-  return nextId;
 }
 
 export function useDisplayStateSocket() {
@@ -117,7 +124,7 @@ export function useDisplayStateSocket() {
     const socket = getSocketClient();
     let isMounted = true;
 
-    queueMicrotask(() => {
+    scheduleMicrotask(() => {
       if (isMounted) {
         setConnectionStatus(socket.connected ? "connected" : "reconnecting");
       }

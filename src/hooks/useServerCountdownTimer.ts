@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { scheduleMicrotask } from "@/lib/scheduleMicrotask";
 import type {
   CountdownTimerState,
   TimerDigits,
@@ -70,6 +71,7 @@ export function useServerCountdownTimer(
 ) {
   const localTargetEndTimeRef = useRef<number | null>(null);
   const lastSnapshotKeyRef = useRef<string | null>(null);
+  const serverTimerRef = useRef(serverTimer);
 
   const [derivedTimer, setDerivedTimer] =
     useState<CountdownTimerState>(serverTimer);
@@ -77,8 +79,22 @@ export function useServerCountdownTimer(
   const snapshotKey = useMemo(() => getSnapshotKey(serverTimer), [serverTimer]);
 
   useEffect(() => {
+    serverTimerRef.current = serverTimer;
+  }, [serverTimer]);
+
+  useEffect(() => {
     if (lastSnapshotKeyRef.current === snapshotKey) {
       return;
+    }
+
+    let isCurrentSnapshot = true;
+
+    function applyDerivedTimer(nextTimer: CountdownTimerState) {
+      scheduleMicrotask(() => {
+        if (isCurrentSnapshot) {
+          setDerivedTimer(nextTimer);
+        }
+      });
     }
 
     lastSnapshotKeyRef.current = snapshotKey;
@@ -94,15 +110,21 @@ export function useServerCountdownTimer(
 
       localTargetEndTimeRef.current = localTargetEndTimeMs;
 
-      setDerivedTimer(
+      applyDerivedTimer(
         createRunningTimerFromLocalTarget(serverTimer, localTargetEndTimeMs),
       );
 
-      return;
+      return () => {
+        isCurrentSnapshot = false;
+      };
     }
 
     localTargetEndTimeRef.current = null;
-    setDerivedTimer(serverTimer);
+    applyDerivedTimer(serverTimer);
+
+    return () => {
+      isCurrentSnapshot = false;
+    };
   }, [serverTimer, snapshotKey, estimatedOneWayLatencyMs]);
 
   useEffect(() => {
@@ -118,14 +140,17 @@ export function useServerCountdownTimer(
       }
 
       setDerivedTimer(
-        createRunningTimerFromLocalTarget(serverTimer, localTargetEndTimeMs),
+        createRunningTimerFromLocalTarget(
+          serverTimerRef.current,
+          localTargetEndTimeMs,
+        ),
       );
     }, 20);
 
     return () => {
       window.clearInterval(interval);
     };
-  }, [serverTimer]);
+  }, [serverTimer.status]);
 
   const displayedTime = useMemo(
     () => formatTime(derivedTimer.remainingMs),

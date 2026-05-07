@@ -145,6 +145,14 @@ Set the Traffic Light host in the admin console to:
 127.0.0.1:3004
 ```
 
+When the production dashboard runs in Docker and the mock runs on the host
+machine or in the dev container with port `3004` published, set the Traffic
+Light host in the admin console to:
+
+```text
+host.docker.internal:3004
+```
+
 The mock implements the same simple HTTP endpoints as the hardware:
 
 - `GET /off`

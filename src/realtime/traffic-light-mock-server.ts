@@ -269,5 +269,10 @@ const server = createServer((request, response) => {
 server.listen(port, "0.0.0.0", () => {
   console.log("> CAuDri traffic light mock ready");
   console.log(`> http://0.0.0.0:${port}`);
-  console.log("> set dashboard host to 127.0.0.1:" + port);
+  console.log("> set dashboard host to 127.0.0.1:" + port + " for local dev");
+  console.log(
+    "> set dashboard host to host.docker.internal:" +
+      port +
+      " from Docker production",
+  );
 });

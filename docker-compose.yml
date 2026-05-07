@@ -13,6 +13,7 @@ services:
     ports:
       - "3000:3000"
       - "3001:3001"
+      - "3004:3004"
     environment:
       NODE_ENV: development
       NEXT_TELEMETRY_DISABLED: "1"
