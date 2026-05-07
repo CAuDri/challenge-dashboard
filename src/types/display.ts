@@ -3,6 +3,11 @@ import type { ScreenDefinition } from "@/types/screen";
 import type { Team } from "@/types/team";
 import type { CountdownTimerState } from "@/types/timer";
 import type { TrafficLightState } from "@/types/traffic-light";
+import type {
+  DisplayClientInfo,
+  DisplayControlState,
+  DisplayDiagnostics,
+} from "@/types/display-client";
 
 export type DisplayState = {
   activeScreenId: string;
@@ -12,4 +17,7 @@ export type DisplayState = {
   timer: CountdownTimerState;
   autoEndRunWhenTimerFinished: boolean;
   trafficLight: TrafficLightState;
+  displayClients: DisplayClientInfo[];
+  displayControl: DisplayControlState;
+  diagnostics: DisplayDiagnostics;
 };

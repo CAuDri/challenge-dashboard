@@ -4,14 +4,19 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { disciplines, type DisciplineId, type Team } from "@/types/team";
+import { ArrowDown, ArrowUp } from "lucide-react";
 
 type TeamCardProps = {
   team: Team;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
   onEdit: (team: Team) => void;
   onDelete: (teamId: string) => void;
+  onMove: (teamId: string, direction: -1 | 1) => void;
   onScoreChange: (
     teamId: string,
     disciplineId: DisciplineId,
@@ -21,8 +26,11 @@ type TeamCardProps = {
 
 export function TeamCard({
   team,
+  canMoveUp,
+  canMoveDown,
   onEdit,
   onDelete,
+  onMove,
   onScoreChange,
 }: TeamCardProps) {
   const participatingDisciplines = disciplines.filter((discipline) =>
@@ -63,6 +71,28 @@ export function TeamCard({
             >
               Edit Team
             </DropdownMenuItem>
+
+            <DropdownMenuSeparator className="bg-slate-800" />
+
+            <DropdownMenuItem
+              disabled={!canMoveUp}
+              onClick={() => onMove(team.id, -1)}
+              className="cursor-pointer gap-2 focus:bg-slate-800 focus:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ArrowUp className="size-4 text-cyan-300" />
+              Move Up
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
+              disabled={!canMoveDown}
+              onClick={() => onMove(team.id, 1)}
+              className="cursor-pointer gap-2 focus:bg-slate-800 focus:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ArrowDown className="size-4 text-cyan-300" />
+              Move Down
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator className="bg-slate-800" />
 
             <DropdownMenuItem
               onClick={handleDelete}

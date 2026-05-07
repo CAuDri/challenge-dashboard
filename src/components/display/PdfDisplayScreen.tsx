@@ -3,9 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import { PdfPagePreview } from "@/components/pdf/PdfPagePreview";
 import type { ScreenDefinition } from "@/types/screen";
+import type { DisplayControlState } from "@/types/display-client";
 
 type PdfDisplayScreenProps = {
   screen: ScreenDefinition;
+  displayClientId?: string;
+  displayControl: DisplayControlState;
+  onPageChange: (payload: {
+    clientId: string;
+    screenId: string;
+    page: number;
+    pageCount: number;
+  }) => void;
 };
 
 type Size = {
@@ -17,7 +26,12 @@ function clampPage(pageNumber: number, numPages: number) {
   return Math.min(Math.max(1, pageNumber), Math.max(1, numPages));
 }
 
-export function PdfDisplayScreen({ screen }: PdfDisplayScreenProps) {
+export function PdfDisplayScreen({
+  screen,
+  displayClientId,
+  displayControl,
+  onPageChange,
+}: PdfDisplayScreenProps) {
   const pdfUrl = screen.config?.pdf?.pdfUrl;
   const initialPage = screen.config?.pdf?.previewPage ?? 1;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -28,6 +42,11 @@ export function PdfDisplayScreen({ screen }: PdfDisplayScreenProps) {
   const [pageAspectRatio, setPageAspectRatio] = useState<number>(1 / Math.SQRT2);
   const [pageCount, setPageCount] = useState(1);
   const [currentPage, setCurrentPage] = useState(initialPage);
+  const syncedPageState = displayControl.pdfPages[screen.id];
+  const canControlSharedState =
+    !displayControl.syncEnabled ||
+    !displayControl.mainDisplayClientId ||
+    displayControl.mainDisplayClientId === displayClientId;
 
   useEffect(() => {
     let isMounted = true;
@@ -45,6 +64,25 @@ export function PdfDisplayScreen({ screen }: PdfDisplayScreenProps) {
       isMounted = false;
     };
   }, [initialPage, screen.id]);
+
+  useEffect(() => {
+    if (!displayControl.syncEnabled || canControlSharedState) {
+      return;
+    }
+
+    if (!syncedPageState) {
+      return;
+    }
+
+    queueMicrotask(() => {
+      setCurrentPage(clampPage(syncedPageState.page, pageCount));
+    });
+  }, [
+    canControlSharedState,
+    displayControl.syncEnabled,
+    pageCount,
+    syncedPageState,
+  ]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -74,12 +112,31 @@ export function PdfDisplayScreen({ screen }: PdfDisplayScreenProps) {
   }, []);
 
   useEffect(() => {
+    function setSharedPage(pageNumber: number) {
+      if (displayControl.syncEnabled && !canControlSharedState) {
+        return;
+      }
+
+      const nextPage = clampPage(pageNumber, pageCount);
+
+      setCurrentPage(nextPage);
+
+      if (displayClientId && canControlSharedState) {
+        onPageChange({
+          clientId: displayClientId,
+          screenId: screen.id,
+          page: nextPage,
+          pageCount,
+        });
+      }
+    }
+
     function showNextPage() {
-      setCurrentPage((pageNumber) => Math.min(pageNumber + 1, pageCount));
+      setSharedPage(currentPage + 1);
     }
 
     function showPreviousPage() {
-      setCurrentPage((pageNumber) => Math.max(pageNumber - 1, 1));
+      setSharedPage(currentPage - 1);
     }
 
     function handlePointerDown(event: PointerEvent) {
@@ -119,12 +176,12 @@ export function PdfDisplayScreen({ screen }: PdfDisplayScreenProps) {
 
       if (event.key.toLowerCase() === "home") {
         event.preventDefault();
-        setCurrentPage(1);
+        setSharedPage(1);
       }
 
       if (event.key.toLowerCase() === "end") {
         event.preventDefault();
-        setCurrentPage(pageCount);
+        setSharedPage(pageCount);
       }
     }
 
@@ -135,7 +192,15 @@ export function PdfDisplayScreen({ screen }: PdfDisplayScreenProps) {
       window.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [pageCount]);
+  }, [
+    canControlSharedState,
+    currentPage,
+    displayClientId,
+    displayControl.syncEnabled,
+    onPageChange,
+    pageCount,
+    screen.id,
+  ]);
 
   if (!pdfUrl) {
     return (
@@ -184,7 +249,20 @@ export function PdfDisplayScreen({ screen }: PdfDisplayScreenProps) {
           errorLabel="Failed to load presentation"
           onDocumentLoadSuccess={(numPages) => {
             setPageCount(numPages);
-            setCurrentPage((pageNumber) => clampPage(pageNumber, numPages));
+            setCurrentPage((pageNumber) => {
+              const nextPage = clampPage(pageNumber, numPages);
+
+              if (displayClientId && canControlSharedState) {
+                onPageChange({
+                  clientId: displayClientId,
+                  screenId: screen.id,
+                  page: nextPage,
+                  pageCount: numPages,
+                });
+              }
+
+              return nextPage;
+            });
           }}
           onPageLoadSuccess={(page) => {
             setPageAspectRatio(page.width / page.height);

@@ -4,10 +4,19 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import type { ScreenDefinition } from "@/types/screen";
 import { disciplines, type DisciplineId, type Team } from "@/types/team";
+import type { DisplayControlState } from "@/types/display-client";
 
 type ScoreboardDisplayScreenProps = {
   screen: ScreenDefinition;
   teams: Team[];
+  displayClientId?: string;
+  displayControl: DisplayControlState;
+  onRevealChange: (payload: {
+    clientId: string;
+    screenId: string;
+    revealedCount: number;
+    totalCount: number;
+  }) => void;
 };
 
 type RankedTeam = {
@@ -76,6 +85,9 @@ function getPlacementLabel(rank: number) {
 export function ScoreboardDisplayScreen({
   screen,
   teams,
+  displayClientId,
+  displayControl,
+  onRevealChange,
 }: ScoreboardDisplayScreenProps) {
   const disciplineId = screen.config?.scoreboard?.disciplineId;
 
@@ -88,20 +100,71 @@ export function ScoreboardDisplayScreen({
   }, [disciplineId, teams]);
 
   const [revealedCount, setRevealedCount] = useState(0);
+  const syncedRevealState = displayControl.scoreboardReveals[screen.id];
+  const canControlSharedState =
+    !displayControl.syncEnabled ||
+    !displayControl.mainDisplayClientId ||
+    displayControl.mainDisplayClientId === displayClientId;
 
   useEffect(() => {
-    setRevealedCount(0);
+    queueMicrotask(() => {
+      setRevealedCount(0);
+    });
   }, [screen.id, disciplineId]);
 
   useEffect(() => {
-    function revealNext() {
-      setRevealedCount((currentCount) =>
-        Math.min(currentCount + 1, rankedTeams.length),
+    if (!displayControl.syncEnabled || canControlSharedState) {
+      return;
+    }
+
+    if (!syncedRevealState) {
+      return;
+    }
+
+    queueMicrotask(() => {
+      setRevealedCount(
+        Math.min(
+          Math.max(0, syncedRevealState.revealedCount),
+          rankedTeams.length,
+        ),
       );
+    });
+  }, [
+    canControlSharedState,
+    displayControl.syncEnabled,
+    rankedTeams.length,
+    syncedRevealState,
+  ]);
+
+  useEffect(() => {
+    function setSharedRevealedCount(nextCount: number) {
+      if (displayControl.syncEnabled && !canControlSharedState) {
+        return;
+      }
+
+      const nextRevealedCount = Math.min(
+        Math.max(0, nextCount),
+        rankedTeams.length,
+      );
+
+      setRevealedCount(nextRevealedCount);
+
+      if (displayClientId && canControlSharedState) {
+        onRevealChange({
+          clientId: displayClientId,
+          screenId: screen.id,
+          revealedCount: nextRevealedCount,
+          totalCount: rankedTeams.length,
+        });
+      }
+    }
+
+    function revealNext() {
+      setSharedRevealedCount(revealedCount + 1);
     }
 
     function revealPrevious() {
-      setRevealedCount((currentCount) => Math.max(currentCount - 1, 0));
+      setSharedRevealedCount(revealedCount - 1);
     }
 
     function handlePointerDown() {
@@ -125,7 +188,7 @@ export function ScoreboardDisplayScreen({
 
       if (event.key.toLowerCase() === "r") {
         event.preventDefault();
-        setRevealedCount(0);
+        setSharedRevealedCount(0);
       }
     }
 
@@ -136,7 +199,15 @@ export function ScoreboardDisplayScreen({
       window.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [rankedTeams.length]);
+  }, [
+    canControlSharedState,
+    displayClientId,
+    displayControl.syncEnabled,
+    onRevealChange,
+    rankedTeams.length,
+    revealedCount,
+    screen.id,
+  ]);
 
   if (!disciplineId) {
     return (

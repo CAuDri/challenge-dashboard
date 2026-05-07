@@ -7,7 +7,7 @@ import { useAdminState } from "@/providers/AdminStateProvider";
 import type { Team, TeamDraft } from "@/types/team";
 
 export function TeamScorePanel() {
-  const { teams, addTeam, updateTeam, deleteTeam, updateTeamScore } =
+  const { teams, addTeam, updateTeam, deleteTeam, updateTeamScore, reorderTeam } =
     useAdminState();
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -76,13 +76,16 @@ export function TeamScorePanel() {
           </div>
         ) : (
           <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
-            {teams.map((team) => (
+            {teams.map((team, index) => (
               <TeamCard
                 key={team.id}
                 team={team}
+                canMoveUp={index > 0}
+                canMoveDown={index < teams.length - 1}
                 onEdit={handleEditTeam}
                 onDelete={deleteTeam}
                 onScoreChange={updateTeamScore}
+                onMove={(teamId, direction) => reorderTeam(teamId, direction)}
               />
             ))}
           </div>

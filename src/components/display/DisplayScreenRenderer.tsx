@@ -8,12 +8,27 @@ import type { CurrentRunState } from "@/types/run";
 import type { ScreenDefinition } from "@/types/screen";
 import type { Team } from "@/types/team";
 import type { CountdownTimerState } from "@/types/timer";
+import type { DisplayControlState } from "@/types/display-client";
 
 type DisplayScreenRendererProps = {
   screen: ScreenDefinition;
   teams: Team[];
   currentRun: CurrentRunState;
   timer: CountdownTimerState;
+  displayClientId?: string;
+  displayControl: DisplayControlState;
+  onPdfPageChange: (payload: {
+    clientId: string;
+    screenId: string;
+    page: number;
+    pageCount: number;
+  }) => void;
+  onScoreboardRevealChange: (payload: {
+    clientId: string;
+    screenId: string;
+    revealedCount: number;
+    totalCount: number;
+  }) => void;
 };
 
 function ImageDisplayScreen({ screen }: { screen: ScreenDefinition }) {
@@ -56,13 +71,25 @@ export function DisplayScreenRenderer({
   teams,
   currentRun,
   timer,
+  displayClientId,
+  displayControl,
+  onPdfPageChange,
+  onScoreboardRevealChange,
 }: DisplayScreenRendererProps) {
   switch (screen.type) {
     case "image":
       return <ImageDisplayScreen screen={screen} />;
 
     case "scoreboard":
-      return <ScoreboardDisplayScreen screen={screen} teams={teams} />;
+      return (
+        <ScoreboardDisplayScreen
+          screen={screen}
+          teams={teams}
+          displayClientId={displayClientId}
+          displayControl={displayControl}
+          onRevealChange={onScoreboardRevealChange}
+        />
+      );
 
     case "timer":
       return (
@@ -75,7 +102,14 @@ export function DisplayScreenRenderer({
       );
 
     case "pdf":
-      return <PdfDisplayScreen screen={screen} />;
+      return (
+        <PdfDisplayScreen
+          screen={screen}
+          displayClientId={displayClientId}
+          displayControl={displayControl}
+          onPageChange={onPdfPageChange}
+        />
+      );
 
     case "camera":
       return <CameraDisplayScreen screen={screen} />;

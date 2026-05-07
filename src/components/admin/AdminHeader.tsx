@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { dashboardContentClassName } from "@/config/layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +12,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Download, ExternalLink, Menu, RotateCcw, Upload } from "lucide-react";
+import {
+  Activity,
+  Download,
+  ExternalLink,
+  Menu,
+  MonitorCheck,
+  RotateCcw,
+  Upload,
+} from "lucide-react";
 import {
   exportDashboardBackup,
   importDashboardBackup,
@@ -20,6 +28,8 @@ import {
 } from "@/lib/realtime/dashboardBackup";
 import { useAdminState } from "@/providers/AdminStateProvider";
 import type { RealtimeConnectionStatus } from "@/hooks/useDisplayStateSocket";
+import { DisplayHealthDialog } from "@/components/admin/DisplayHealthDialog";
+import { DiagnosticsDialog } from "@/components/admin/DiagnosticsDialog";
 
 function RealtimeConnectionHint({
   status,
@@ -68,6 +78,8 @@ function RealtimeConnectionHint({
 export function AdminHeader() {
   const importInputRef = useRef<HTMLInputElement>(null);
   const { connectionStatus, trafficLight } = useAdminState();
+  const [displayHealthOpen, setDisplayHealthOpen] = useState(false);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
 
   const showTrafficLightWarning =
     (trafficLight.config.autoConnect ||
@@ -184,6 +196,30 @@ export function AdminHeader() {
                   className="gap-3 px-3 py-2 text-sm focus:bg-slate-800 focus:text-cyan-100"
                   onSelect={(event) => {
                     event.preventDefault();
+                    setDisplayHealthOpen(true);
+                  }}
+                >
+                  <MonitorCheck className="size-4 text-cyan-300" />
+                  Display Health
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  className="gap-3 px-3 py-2 text-sm focus:bg-slate-800 focus:text-cyan-100"
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    setDiagnosticsOpen(true);
+                  }}
+                >
+                  <Activity className="size-4 text-cyan-300" />
+                  Diagnostics
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator className="bg-slate-700" />
+
+                <DropdownMenuItem
+                  className="gap-3 px-3 py-2 text-sm focus:bg-slate-800 focus:text-cyan-100"
+                  onSelect={(event) => {
+                    event.preventDefault();
                     void handleExportBackup();
                   }}
                 >
@@ -238,6 +274,15 @@ export function AdminHeader() {
           />
         </div>
       </div>
+
+      <DisplayHealthDialog
+        open={displayHealthOpen}
+        onOpenChange={setDisplayHealthOpen}
+      />
+      <DiagnosticsDialog
+        open={diagnosticsOpen}
+        onOpenChange={setDiagnosticsOpen}
+      />
     </header>
   );
 }

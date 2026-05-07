@@ -9,6 +9,7 @@ import type {
   TrafficLightColor,
   TrafficLightConfigPatch,
 } from "@/types/traffic-light";
+import type { DisplayClientInfo } from "@/types/display-client";
 
 type AdminDisplayStatePayload = Pick<
   DisplayState,
@@ -64,11 +65,47 @@ const initialDisplayState: DisplayState = {
       lastError: undefined,
     },
   },
+  displayClients: [],
+  displayControl: {
+    syncEnabled: true,
+    mainDisplayClientId: undefined,
+    pdfPages: {},
+    scoreboardReveals: {},
+  },
+  diagnostics: {
+    serverNowMs: 0,
+    activeScreenId: "fallback",
+    timerStatus: "stopped",
+    currentRunPhase: "standby",
+    displayClientCount: 0,
+    connectedDisplayClientCount: 0,
+  },
 };
+
+function getOrCreateDisplayClientId() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  const storageKey = "caudri-display-client-id";
+  const existingId = window.localStorage.getItem(storageKey);
+
+  if (existingId) {
+    return existingId;
+  }
+
+  const nextId = crypto.randomUUID();
+  window.localStorage.setItem(storageKey, nextId);
+
+  return nextId;
+}
 
 export function useDisplayStateSocket() {
   const [displayState, setDisplayState] =
     useState<DisplayState>(initialDisplayState);
+  const [displayClientId] = useState<string | undefined>(() =>
+    getOrCreateDisplayClientId(),
+  );
 
   const [connectionStatus, setConnectionStatus] =
     useState<RealtimeConnectionStatus>("reconnecting");
@@ -293,8 +330,73 @@ export function useDisplayStateSocket() {
     }));
   }, []);
 
+  const registerDisplayClient = useCallback(
+    (
+      client: Pick<
+        DisplayClientInfo,
+        | "id"
+        | "name"
+        | "activeScreenId"
+        | "activeScreenName"
+        | "activeScreenType"
+      > &
+        Partial<Pick<DisplayClientInfo, "hostname" | "userAgent">>,
+    ) => {
+      getSocketClient().emit("display-client:register", client);
+    },
+    [],
+  );
+
+  const heartbeatDisplayClient = useCallback(
+    (
+      client: Pick<
+        DisplayClientInfo,
+        | "id"
+        | "activeScreenId"
+        | "activeScreenName"
+        | "activeScreenType"
+      >,
+    ) => {
+      getSocketClient().emit("display-client:heartbeat", client);
+    },
+    [],
+  );
+
+  const setMainDisplayClientId = useCallback((clientId: string | undefined) => {
+    getSocketClient().emit("display-control:set-main-display", { clientId });
+  }, []);
+
+  const setDisplaySyncEnabled = useCallback((enabled: boolean) => {
+    getSocketClient().emit("display-control:set-sync-enabled", { enabled });
+  }, []);
+
+  const publishPdfPage = useCallback(
+    (payload: {
+      clientId: string;
+      screenId: string;
+      page: number;
+      pageCount: number;
+    }) => {
+      getSocketClient().emit("display-runtime:pdf-page", payload);
+    },
+    [],
+  );
+
+  const publishScoreboardReveal = useCallback(
+    (payload: {
+      clientId: string;
+      screenId: string;
+      revealedCount: number;
+      totalCount: number;
+    }) => {
+      getSocketClient().emit("display-runtime:scoreboard-reveal", payload);
+    },
+    [],
+  );
+
   return {
     displayState,
+    displayClientId,
     connectionStatus,
     publishDisplayState,
     updateDashboardState,
@@ -304,5 +406,11 @@ export function useDisplayStateSocket() {
     updateTrafficLightConfig,
     connectTrafficLight,
     commandTrafficLight,
+    registerDisplayClient,
+    heartbeatDisplayClient,
+    setMainDisplayClientId,
+    setDisplaySyncEnabled,
+    publishPdfPage,
+    publishScoreboardReveal,
   };
 }

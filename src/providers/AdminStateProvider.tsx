@@ -20,6 +20,11 @@ import type {
   TrafficLightConfigPatch,
   TrafficLightState,
 } from "@/types/traffic-light";
+import type {
+  DisplayClientInfo,
+  DisplayControlState,
+  DisplayDiagnostics,
+} from "@/types/display-client";
 
 type CountdownTimerController = ReturnType<typeof useServerCountdownTimer>;
 
@@ -63,6 +68,13 @@ type AdminStateContextValue = {
   updateTrafficLightConfig: (patch: TrafficLightConfigPatch) => void;
   connectTrafficLight: () => void;
   commandTrafficLight: (color: TrafficLightColor) => void;
+
+  displayClients: DisplayClientInfo[];
+  displayControl: DisplayControlState;
+  diagnostics: DisplayDiagnostics;
+  setMainDisplayClientId: (clientId: string | undefined) => void;
+  setDisplaySyncEnabled: (enabled: boolean) => void;
+  reorderTeam: (teamId: string, direction: -1 | 1) => void;
 };
 
 const AdminStateContext = createContext<AdminStateContextValue | null>(null);
@@ -94,6 +106,8 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
     updateTrafficLightConfig,
     connectTrafficLight,
     commandTrafficLight,
+    setMainDisplayClientId,
+    setDisplaySyncEnabled,
   } = useDisplayStateSocket();
 
   const timer = useServerCountdownTimer(
@@ -108,6 +122,9 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
   const currentRun = displayState.currentRun;
   const autoEndRunWhenTimerFinished = displayState.autoEndRunWhenTimerFinished;
   const trafficLight = displayState.trafficLight;
+  const displayClients = displayState.displayClients;
+  const displayControl = displayState.displayControl;
+  const diagnostics = displayState.diagnostics;
 
   function addTeam(teamDraft: TeamDraft) {
     const teamId = crypto.randomUUID();
@@ -167,6 +184,28 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
               selectedTeamId: undefined,
             }
           : currentRun,
+    });
+  }
+
+  function reorderTeam(teamId: string, direction: -1 | 1) {
+    const currentIndex = teams.findIndex((team) => team.id === teamId);
+
+    if (currentIndex === -1) {
+      return;
+    }
+
+    const nextIndex = currentIndex + direction;
+
+    if (nextIndex < 0 || nextIndex >= teams.length) {
+      return;
+    }
+
+    const nextTeams = [...teams];
+    const [team] = nextTeams.splice(currentIndex, 1);
+    nextTeams.splice(nextIndex, 0, team);
+
+    updateDashboardState({
+      teams: nextTeams,
     });
   }
 
@@ -381,6 +420,13 @@ export function AdminStateProvider({ children }: AdminStateProviderProps) {
         updateTrafficLightConfig,
         connectTrafficLight,
         commandTrafficLight,
+
+        displayClients,
+        displayControl,
+        diagnostics,
+        setMainDisplayClientId,
+        setDisplaySyncEnabled,
+        reorderTeam,
       }}
     >
       {children}

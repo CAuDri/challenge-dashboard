@@ -3,10 +3,15 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 config();
 
+import { reverse } from "node:dns/promises";
 import { createServer } from "node:http";
-import { Server as SocketIOServer } from "socket.io";
+import { Server as SocketIOServer, type Socket } from "socket.io";
 import { demoScreens } from "../config/demoScreens";
 import type { DisplayState } from "../types/display";
+import type {
+  DisplayClientInfo,
+  DisplayControlState,
+} from "../types/display-client";
 import {
   clearPendingPersistedDashboardStateSave,
   createPersistedStateFromDisplayState,
@@ -120,6 +125,14 @@ const defaultPersistedDashboardState: PersistedDashboardState = {
   trafficLight: defaultTrafficLightConfig,
 };
 
+const displayClients = new Map<string, DisplayClientInfo>();
+let displayControl: DisplayControlState = {
+  syncEnabled: true,
+  mainDisplayClientId: undefined,
+  pdfPages: {},
+  scoreboardReveals: {},
+};
+
 let displayState: DisplayState = {
   ...defaultPersistedDashboardState,
   timer: {
@@ -135,6 +148,16 @@ let displayState: DisplayState = {
   trafficLight: {
     config: defaultTrafficLightConfig,
     runtime: createDefaultTrafficLightRuntime(),
+  },
+  displayClients: [],
+  displayControl,
+  diagnostics: {
+    serverNowMs: initialNow,
+    activeScreenId: defaultPersistedDashboardState.activeScreenId,
+    timerStatus: "stopped",
+    currentRunPhase: defaultPersistedDashboardState.currentRun.phase,
+    displayClientCount: 0,
+    connectedDisplayClientCount: 0,
   },
 };
 
@@ -200,9 +223,24 @@ function getTimerSnapshot() {
 }
 
 function getDisplayStateSnapshot(): DisplayState {
+  const timer = getTimerSnapshot();
+  const clients = Array.from(displayClients.values());
+
   return {
     ...displayState,
-    timer: getTimerSnapshot(),
+    timer,
+    displayClients: clients,
+    displayControl,
+    diagnostics: {
+      serverNowMs: nowMs(),
+      activeScreenId: displayState.activeScreenId,
+      timerStatus: timer.status,
+      currentRunPhase: displayState.currentRun.phase,
+      displayClientCount: clients.length,
+      connectedDisplayClientCount: clients.filter(
+        (client) => client.status === "connected",
+      ).length,
+    },
   };
 }
 
@@ -395,6 +433,16 @@ function replaceDashboardState(persistedState: PersistedDashboardState) {
     trafficLight: {
       config: persistedState.trafficLight,
       runtime: createDefaultTrafficLightRuntime(),
+    },
+    displayClients: [],
+    displayControl,
+    diagnostics: {
+      serverNowMs: nowMs(),
+      activeScreenId: persistedState.activeScreenId,
+      timerStatus: "stopped",
+      currentRunPhase: "standby",
+      displayClientCount: 0,
+      connectedDisplayClientCount: 0,
     },
   };
 }
@@ -692,6 +740,45 @@ const io = new SocketIOServer(httpServer, {
   },
 });
 
+function getSocketIpAddress(socket: Socket) {
+  const forwardedFor = socket.handshake.headers["x-forwarded-for"];
+  const rawAddress =
+    typeof forwardedFor === "string"
+      ? forwardedFor.split(",")[0]?.trim()
+      : socket.handshake.address;
+
+  return rawAddress?.replace(/^::ffff:/, "");
+}
+
+async function resolveDisplayClientHostname(
+  clientId: string,
+  ipAddress: string | undefined,
+  io: SocketIOServer,
+) {
+  if (!ipAddress || ipAddress.includes(":")) {
+    return;
+  }
+
+  try {
+    const hostnames = await reverse(ipAddress);
+    const hostname = hostnames[0];
+    const client = displayClients.get(clientId);
+
+    if (!hostname || !client || client.hostname) {
+      return;
+    }
+
+    displayClients.set(clientId, {
+      ...client,
+      hostname,
+    });
+
+    broadcastDisplayState(io);
+  } catch {
+    // Reverse DNS is optional on the event network.
+  }
+}
+
 io.on("connection", (socket) => {
   console.log(`[socket] client connected: ${socket.id}`);
 
@@ -709,6 +796,232 @@ io.on("connection", (socket) => {
     socket.emit("time:sync-response", {
       clientSentAt: payload.clientSentAt,
     });
+  });
+
+  socket.on("display-client:register", (payload: unknown) => {
+    if (typeof payload !== "object" || payload === null) {
+      return;
+    }
+
+    const candidate = payload as Partial<DisplayClientInfo>;
+    const clientId =
+      typeof candidate.id === "string" && candidate.id.trim().length > 0
+        ? candidate.id
+        : socket.id;
+    const now = nowMs();
+    const existingClient = displayClients.get(clientId);
+    const ipAddress = getSocketIpAddress(socket);
+
+    displayClients.set(clientId, {
+      id: clientId,
+      socketId: socket.id,
+      name:
+        typeof candidate.name === "string" && candidate.name.trim().length > 0
+          ? candidate.name.trim()
+          : existingClient?.name ?? `Display ${clientId.slice(0, 6)}`,
+      status: "connected",
+      ipAddress,
+      hostname:
+        typeof candidate.hostname === "string" &&
+        candidate.hostname.trim().length > 0
+          ? candidate.hostname.trim()
+          : existingClient?.hostname,
+      userAgent:
+        typeof candidate.userAgent === "string"
+          ? candidate.userAgent
+          : socket.handshake.headers["user-agent"],
+      activeScreenId:
+        typeof candidate.activeScreenId === "string"
+          ? candidate.activeScreenId
+          : existingClient?.activeScreenId,
+      activeScreenName:
+        typeof candidate.activeScreenName === "string"
+          ? candidate.activeScreenName
+          : existingClient?.activeScreenName,
+      activeScreenType:
+        typeof candidate.activeScreenType === "string"
+          ? candidate.activeScreenType
+          : existingClient?.activeScreenType,
+      connectedAtServerMs: existingClient?.connectedAtServerMs ?? now,
+      lastSeenAtServerMs: now,
+      disconnectedAtServerMs: undefined,
+    });
+
+    void resolveDisplayClientHostname(clientId, ipAddress, io);
+    broadcastDisplayState(io);
+  });
+
+  socket.on("display-client:heartbeat", (payload: unknown) => {
+    if (typeof payload !== "object" || payload === null) {
+      return;
+    }
+
+    const candidate = payload as Partial<DisplayClientInfo>;
+
+    if (typeof candidate.id !== "string") {
+      return;
+    }
+
+    const existingClient = displayClients.get(candidate.id);
+
+    if (!existingClient) {
+      return;
+    }
+    const ipAddress = getSocketIpAddress(socket);
+
+    displayClients.set(candidate.id, {
+      ...existingClient,
+      socketId: socket.id,
+      status: "connected",
+      ipAddress,
+      activeScreenId:
+        typeof candidate.activeScreenId === "string"
+          ? candidate.activeScreenId
+          : existingClient.activeScreenId,
+      activeScreenName:
+        typeof candidate.activeScreenName === "string"
+          ? candidate.activeScreenName
+          : existingClient.activeScreenName,
+      activeScreenType:
+        typeof candidate.activeScreenType === "string"
+          ? candidate.activeScreenType
+          : existingClient.activeScreenType,
+      lastSeenAtServerMs: nowMs(),
+      disconnectedAtServerMs: undefined,
+    });
+
+    void resolveDisplayClientHostname(candidate.id, ipAddress, io);
+    broadcastDisplayState(io);
+  });
+
+  socket.on("display-control:set-main-display", (payload: unknown) => {
+    if (typeof payload !== "object" || payload === null) {
+      return;
+    }
+
+    const candidate = payload as { clientId?: unknown };
+
+    displayControl = {
+      ...displayControl,
+      mainDisplayClientId:
+        typeof candidate.clientId === "string" && candidate.clientId.length > 0
+          ? candidate.clientId
+          : undefined,
+    };
+
+    broadcastDisplayState(io);
+  });
+
+  socket.on("display-control:set-sync-enabled", (payload: unknown) => {
+    if (typeof payload !== "object" || payload === null) {
+      return;
+    }
+
+    const candidate = payload as { enabled?: unknown };
+
+    if (typeof candidate.enabled !== "boolean") {
+      return;
+    }
+
+    displayControl = {
+      ...displayControl,
+      syncEnabled: candidate.enabled,
+    };
+
+    broadcastDisplayState(io);
+  });
+
+  socket.on("display-runtime:pdf-page", (payload: unknown) => {
+    if (typeof payload !== "object" || payload === null) {
+      return;
+    }
+
+    const candidate = payload as {
+      clientId?: unknown;
+      screenId?: unknown;
+      page?: unknown;
+      pageCount?: unknown;
+    };
+
+    if (
+      typeof candidate.clientId !== "string" ||
+      typeof candidate.screenId !== "string" ||
+      typeof candidate.page !== "number" ||
+      typeof candidate.pageCount !== "number"
+    ) {
+      return;
+    }
+
+    if (
+      displayControl.syncEnabled &&
+      displayControl.mainDisplayClientId &&
+      displayControl.mainDisplayClientId !== candidate.clientId
+    ) {
+      return;
+    }
+
+    displayControl = {
+      ...displayControl,
+      pdfPages: {
+        ...displayControl.pdfPages,
+        [candidate.screenId]: {
+          page: Math.max(1, Math.round(candidate.page)),
+          pageCount: Math.max(1, Math.round(candidate.pageCount)),
+          updatedByClientId: candidate.clientId,
+          updatedAtServerMs: nowMs(),
+        },
+      },
+    };
+
+    broadcastDisplayState(io);
+  });
+
+  socket.on("display-runtime:scoreboard-reveal", (payload: unknown) => {
+    if (typeof payload !== "object" || payload === null) {
+      return;
+    }
+
+    const candidate = payload as {
+      clientId?: unknown;
+      screenId?: unknown;
+      revealedCount?: unknown;
+      totalCount?: unknown;
+    };
+
+    if (
+      typeof candidate.clientId !== "string" ||
+      typeof candidate.screenId !== "string" ||
+      typeof candidate.revealedCount !== "number" ||
+      typeof candidate.totalCount !== "number"
+    ) {
+      return;
+    }
+
+    if (
+      displayControl.syncEnabled &&
+      displayControl.mainDisplayClientId &&
+      displayControl.mainDisplayClientId !== candidate.clientId
+    ) {
+      return;
+    }
+
+    displayControl = {
+      ...displayControl,
+      scoreboardReveals: {
+        ...displayControl.scoreboardReveals,
+        [candidate.screenId]: {
+          revealedCount: Math.min(
+            Math.max(0, Math.round(candidate.revealedCount)),
+            Math.max(0, Math.round(candidate.totalCount)),
+          ),
+          totalCount: Math.max(0, Math.round(candidate.totalCount)),
+          updatedByClientId: candidate.clientId,
+          updatedAtServerMs: nowMs(),
+        },
+      },
+    };
+
+    broadcastDisplayState(io);
   });
 
   socket.on("dashboard:update-state", (payload: unknown) => {
@@ -1010,6 +1323,20 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
+    const disconnectedAtServerMs = nowMs();
+
+    for (const [clientId, client] of displayClients.entries()) {
+      if (client.socketId === socket.id) {
+        displayClients.set(clientId, {
+          ...client,
+          status: "disconnected",
+          disconnectedAtServerMs,
+          lastSeenAtServerMs: disconnectedAtServerMs,
+        });
+      }
+    }
+
+    broadcastDisplayState(io);
     console.log(`[socket] client disconnected: ${socket.id}`);
   });
 });
@@ -1041,6 +1368,16 @@ async function startServer() {
     trafficLight: {
       config: persistedDashboardState.trafficLight,
       runtime: createDefaultTrafficLightRuntime(),
+    },
+    displayClients: [],
+    displayControl,
+    diagnostics: {
+      serverNowMs: startupNow,
+      activeScreenId: persistedDashboardState.activeScreenId,
+      timerStatus: "stopped",
+      currentRunPhase: "standby",
+      displayClientCount: 0,
+      connectedDisplayClientCount: 0,
     },
   };
 

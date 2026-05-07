@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { DisplayScreenRenderer } from "@/components/display/DisplayScreenRenderer";
 import { useDisplayStateSocket } from "@/hooks/useDisplayStateSocket";
 import { useServerCountdownTimer } from "@/hooks/useServerCountdownTimer";
@@ -18,7 +18,15 @@ function getActiveScreen(
 }
 
 export function ActiveDisplayScreen() {
-  const { displayState, estimatedOneWayLatencyMs } = useDisplayStateSocket();
+  const {
+    displayState,
+    displayClientId,
+    estimatedOneWayLatencyMs,
+    registerDisplayClient,
+    heartbeatDisplayClient,
+    publishPdfPage,
+    publishScoreboardReveal,
+  } = useDisplayStateSocket();
 
   const noopTimerCommands = useMemo(
     () => ({
@@ -41,6 +49,45 @@ export function ActiveDisplayScreen() {
     displayState.activeScreenId,
     displayState.screens,
   );
+
+  useEffect(() => {
+    if (!displayClientId || !activeScreen) {
+      return;
+    }
+
+    const displayClient = {
+      id: displayClientId,
+      name: window.localStorage.getItem("caudri-display-name") ?? "Display",
+      userAgent: window.navigator.userAgent,
+      activeScreenId: activeScreen.id,
+      activeScreenName: activeScreen.name,
+      activeScreenType: activeScreen.type,
+    };
+
+    registerDisplayClient(displayClient);
+  }, [activeScreen, displayClientId, registerDisplayClient]);
+
+  useEffect(() => {
+    if (!displayClientId || !activeScreen) {
+      return;
+    }
+
+    const heartbeat = () => {
+      heartbeatDisplayClient({
+        id: displayClientId,
+        activeScreenId: activeScreen.id,
+        activeScreenName: activeScreen.name,
+        activeScreenType: activeScreen.type,
+      });
+    };
+
+    heartbeat();
+    const intervalId = window.setInterval(heartbeat, 2_500);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [activeScreen, displayClientId, heartbeatDisplayClient]);
 
   if (!activeScreen) {
     return (
@@ -68,6 +115,10 @@ export function ActiveDisplayScreen() {
             teams={displayState.teams}
             currentRun={displayState.currentRun}
             timer={derivedTimer.timer}
+            displayClientId={displayClientId}
+            displayControl={displayState.displayControl}
+            onPdfPageChange={publishPdfPage}
+            onScoreboardRevealChange={publishScoreboardReveal}
           />
         </motion.div>
       </AnimatePresence>

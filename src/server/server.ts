@@ -52,6 +52,21 @@ const displayState: DisplayState = {
       lastError: undefined,
     },
   },
+  displayClients: [],
+  displayControl: {
+    syncEnabled: true,
+    mainDisplayClientId: undefined,
+    pdfPages: {},
+    scoreboardReveals: {},
+  },
+  diagnostics: {
+    serverNowMs: now,
+    activeScreenId: "fallback",
+    timerStatus: "stopped",
+    currentRunPhase: "standby",
+    displayClientCount: 0,
+    connectedDisplayClientCount: 0,
+  },
 };
 
 function getTimerSnapshot() {
