@@ -247,4 +247,4 @@ During the event, use:
 
 ## License
 
-No license has been specified yet.
+This project is licensed under the MIT License. See [LICENSE](LICENSE).

@@ -14,7 +14,8 @@
       {
         "name": "$(debug-stop) Stop Dashboard",
         "color": "#aa0202",
-        "command": "pkill -f 'pnpm dev'"
+        "cwd": "${workspaceFolder}",
+        "command": "pnpm dev:stop"
       }
     ]
   }
