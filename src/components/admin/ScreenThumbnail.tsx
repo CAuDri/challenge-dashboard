@@ -104,6 +104,25 @@ function getRankedTeams(teams: Team[], disciplineId: DisciplineId | undefined) {
 }
 
 function ImageThumbnail({ screen }: { screen: ScreenDefinition }) {
+  if (screen.id === "fallback" && !screen.config?.image?.imageUrl) {
+    return (
+      <div className="relative flex h-full w-full flex-col items-center justify-center gap-4 overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950/70 p-4 text-center">
+        <div className="flex size-28 items-center justify-center rounded-2xl border border-cyan-300/20 bg-slate-950/45 p-6 shadow-[0_0_42px_rgba(34,211,238,0.16)]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/caudri_logo.svg"
+            alt=""
+            className="h-full w-full object-contain"
+          />
+        </div>
+
+        <p className="font-[family-name:var(--font-rajdhani)] text-xl font-bold leading-none text-slate-50">
+          CAUDRI-CHALLENGE 2026
+        </p>
+      </div>
+    );
+  }
+
   if (!screen.config?.image?.imageUrl) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-slate-900 to-slate-950 text-center">

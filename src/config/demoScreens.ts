@@ -3,7 +3,7 @@ import type { ScreenDefinition } from "@/types/screen";
 export const demoScreens: ScreenDefinition[] = [
   {
     id: "fallback",
-    name: "Fallback Image",
+    name: "Fallback Screen",
     description: "Default display if no other screen is active.",
     type: "image",
   },

@@ -34,6 +34,10 @@ type DisplayScreenRendererProps = {
 function ImageDisplayScreen({ screen }: { screen: ScreenDefinition }) {
   const imageUrl = screen.config?.image?.imageUrl;
 
+  if (screen.id === "fallback" && !imageUrl) {
+    return <FallbackDisplayScreen />;
+  }
+
   if (imageUrl) {
     return (
       <main className="flex h-full w-full items-center justify-center bg-black">
@@ -62,6 +66,25 @@ function ImageDisplayScreen({ screen }: { screen: ScreenDefinition }) {
           {screen.description}
         </p>
       </section>
+    </main>
+  );
+}
+
+function FallbackDisplayScreen() {
+  return (
+    <main className="relative flex h-full w-full flex-col items-center justify-center gap-[clamp(2rem,5vh,4rem)] overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 px-[clamp(2rem,4vw,4rem)] py-[clamp(2rem,3vw,3rem)] text-center text-white">
+      <div className="flex h-[clamp(13rem,24vw,28rem)] w-[clamp(13rem,24vw,28rem)] items-center justify-center rounded-[2rem] border border-cyan-300/20 bg-slate-950/40 p-[clamp(2rem,4vw,4.5rem)] shadow-[0_0_90px_rgba(34,211,238,0.16)]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/caudri_logo.svg"
+          alt="CAuDri-Challenge"
+          className="h-full w-full object-contain drop-shadow-[0_0_32px_rgba(34,211,238,0.22)]"
+        />
+      </div>
+
+      <h1 className="font-[family-name:var(--font-rajdhani)] text-[clamp(4rem,7vw,8rem)] font-bold leading-none text-slate-50">
+        CAUDRI-CHALLENGE 2026
+      </h1>
     </main>
   );
 }
